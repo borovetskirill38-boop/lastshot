@@ -124,7 +124,7 @@ h1 {
 }
 canvas {
   display: block;
-  image-rendering: pixelated;
+  image-rendering: auto;
 }
 .controls {
   display: flex;
