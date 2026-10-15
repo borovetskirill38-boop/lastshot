@@ -1,0 +1,191 @@
+:root {
+  font-family: Georgia, serif;
+  color: #eddfbd;
+  background: #211d20;
+  font-synthesis: none;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: radial-gradient(ellipse at 50% 40%, #42302a, transparent 70%);
+  min-height: 100vh;
+}
+#app {
+  max-width: 1120px;
+  margin: auto;
+  padding: 24px 32px;
+}
+header,
+footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+header {
+  border-bottom: 1px solid #685143;
+  padding-bottom: 20px;
+  color: #dfa856;
+  font: 700 15px monospace;
+  letter-spacing: 3px;
+}
+button {
+  font:
+    600 15px Georgia,
+    serif;
+  color: #f3e2bc;
+  background: #46372d;
+  border: 1px solid #97754b;
+  border-radius: 3px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+button:hover:not(:disabled) {
+  background: #765331;
+}
+button:focus-visible {
+  outline: 3px solid #f9c46a;
+  outline-offset: 3px;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+main {
+  text-align: center;
+  padding: 42px 0;
+}
+.eyebrow {
+  font: 12px monospace;
+  letter-spacing: 4px;
+  color: #c69965;
+}
+h1 {
+  font-family: "Roboto Slab", Georgia, serif;
+  font-size: clamp(36px, 6vw, 66px);
+  margin: 14px 0;
+  color: #f2d69c;
+  text-shadow: 3px 4px #100f13;
+}
+.intro {
+  color: #baa58e;
+  font-size: 17px;
+  line-height: 1.6;
+  margin-bottom: 36px;
+}
+#levels {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.level {
+  min-height: 180px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 18px;
+  background: linear-gradient(145deg, #59402f, #302729);
+}
+.level b {
+  font: 36px Georgia;
+  color: #dba85d;
+}
+.level span {
+  line-height: 1.4;
+}
+.level small {
+  color: #b7a087;
+  font: 11px monospace;
+}
+.instructions {
+  font-size: 14px;
+  line-height: 1.9;
+  color: #b7a087;
+  margin: 28px 0 0;
+}
+.hud {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font: 14px monospace;
+  padding: 14px;
+  background: #30282a;
+  line-height: 1.6;
+}
+#game {
+  width: 100%;
+  aspect-ratio: 960/540;
+  background: #dab57b;
+  touch-action: none;
+}
+canvas {
+  display: block;
+  image-rendering: pixelated;
+}
+.controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+#result {
+  border: 1px solid #87603e;
+  background: #30272a;
+  padding: 36px 16px;
+  margin-top: 24px;
+}
+#result h2 {
+  font-size: 32px;
+  color: #f2c577;
+}
+#result button {
+  margin: 6px;
+}
+footer {
+  border-top: 1px solid #685143;
+  padding-top: 20px;
+  color: #9e8776;
+  font: 11px monospace;
+  letter-spacing: 1px;
+}
+footer span {
+  letter-spacing: 0;
+}
+[hidden] {
+  display: none !important;
+}
+@media (max-width: 650px) {
+  #app {
+    padding: 16px 12px;
+  }
+  main {
+    padding: 26px 0;
+  }
+  #levels {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .level {
+    min-height: 130px;
+  }
+  .level:last-child {
+    grid-column: span 2;
+  }
+  .hud {
+    font-size: 11px;
+    flex-wrap: wrap;
+  }
+  .controls button {
+    padding: 12px 9px;
+    font-size: 12px;
+  }
+  footer span {
+    display: none;
+  }
+  .intro {
+    font-size: 15px;
+  }
+}
