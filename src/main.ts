@@ -289,6 +289,15 @@ class Town extends Phaser.Scene {
         return round;
       }),
     );
+    el("life-count").textContent = `${this.lives}/3`;
+    el("life-hearts").replaceChildren(
+      ...Array.from({ length: 3 }, (_, i) => {
+        const heart = document.createElement("i");
+        heart.textContent = "♥";
+        heart.className = i < this.lives ? "heart alive" : "heart lost";
+        return heart;
+      }),
+    );
   }
   reload() {
     if (this.ended || this.paused || this.reloading || this.ammo === 6) return;

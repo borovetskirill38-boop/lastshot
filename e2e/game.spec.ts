@@ -23,6 +23,7 @@ test("first level is endless until three misses", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("canvas")).toBeAttached();
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
+  await expect(page.locator("#life-count")).toHaveText("3/3");
   await page.evaluate(async () => {
     const mod = await import("/src/main.ts");
     const s = mod.game.scene.getScene("town") as any;
@@ -36,6 +37,7 @@ test("first level is endless until three misses", async ({ page }) => {
   await expect(page.locator("#result")).toBeHidden();
   await shoot(page, 20, 500);
   expect(await scene(page, "s=>s.lives")).toBe(2);
+  await expect(page.locator("#life-count")).toHaveText("2/3");
   await page.evaluate(async () => {
     const mod = await import("/src/main.ts");
     const s = mod.game.scene.getScene("town") as any;
@@ -52,6 +54,8 @@ test("first level is endless until three misses", async ({ page }) => {
     }
   });
   await expect(page.locator("#result-title")).toHaveText("Конец игры");
+  await expect(page.locator("#result")).toHaveCSS("position", "fixed");
+  await expect(page.locator("#life-count")).toHaveText("0/3");
   await expect(page.locator("#result-text")).toContainText("800 очков");
   await expect(page.getByRole("button", { name: "Начать заново" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Главное меню" })).toBeVisible();

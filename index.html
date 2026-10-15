@@ -35,9 +35,16 @@
           </div>
           <div id="game">
             <div id="combat-ui" aria-hidden="true">
-              <div id="ammo-belt">
-                <span class="ammo-label">ЗАПАС</span>
-                <span id="ammo-rounds"></span>
+              <div id="status-belt">
+                <div id="life-belt">
+                  <span class="status-label">ЖИЗНИ</span>
+                  <span id="life-hearts"></span>
+                  <strong id="life-count">3/3</strong>
+                </div>
+                <div id="ammo-belt">
+                  <span class="status-label">ПАТРОНЫ</span>
+                  <span id="ammo-rounds"></span>
+                </div>
               </div>
               <div id="crosshair">
                 <span></span>
@@ -59,11 +66,15 @@
           </div>
         </section>
         <section id="result" hidden aria-live="polite">
-          <h2 id="result-title"></h2>
-          <p id="result-text"></p>
-          <button id="retry">Ещё раз</button
-          ><button id="next">Следующий уровень →</button
-          ><button id="choose">Выбор уровня</button>
+          <div class="result-card" role="dialog" aria-modal="true" aria-labelledby="result-title">
+            <h2 id="result-title"></h2>
+            <p id="result-text"></p>
+            <div class="result-actions">
+              <button id="retry">Ещё раз</button
+              ><button id="next">Следующий уровень →</button
+              ><button id="choose">Выбор уровня</button>
+            </div>
+          </div>
         </section>
       </main>
       <footer>
