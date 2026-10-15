@@ -33,7 +33,26 @@
             <span id="level-name"></span
             ><span id="stats" aria-live="polite"></span>
           </div>
-          <div id="game"></div>
+          <div id="game">
+            <div id="combat-ui" aria-hidden="true">
+              <div id="ammo-belt">
+                <span class="ammo-label">ЗАПАС</span>
+                <span id="ammo-rounds"></span>
+              </div>
+              <div id="crosshair">
+                <span></span>
+              </div>
+              <div id="revolver-icon">
+                <svg viewBox="0 0 124 78" role="img">
+                  <path class="gun-metal" d="M8 17h65l7 7h26v13H77l-12 9H39L29 35H8z" />
+                  <circle class="gun-cylinder" cx="55" cy="30" r="13" />
+                  <circle class="gun-pin" cx="55" cy="30" r="4" />
+                  <path class="gun-grip" d="M55 43h22l-2 9-14 21H43l8-27z" />
+                  <path class="gun-highlight" d="M13 21h59l5 5h27" />
+                </svg>
+              </div>
+            </div>
+          </div>
           <div class="controls">
             <button id="back">← Уровни</button><button id="pause">Пауза</button
             ><button id="reload">Перезарядить · R</button>

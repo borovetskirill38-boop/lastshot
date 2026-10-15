@@ -76,9 +76,14 @@ class Town extends Phaser.Scene {
   }
   create() {
     this.drawTown();
-    this.input.on("pointerdown", (p: Phaser.Input.Pointer) =>
-      this.shoot(p.x, p.y),
-    );
+    this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
+      const sight = el("crosshair");
+      sight.style.left = `${(p.x / 960) * 100}%`;
+      sight.style.top = `${(p.y / 540) * 100}%`;
+    });
+    this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
+      this.shoot(p.x, p.y);
+    });
     this.input.keyboard?.on("keydown-R", () => this.reload());
     this.input.keyboard?.on("keydown-ESC", () => this.togglePause());
     this.game.events.on("blur", () => {
@@ -275,6 +280,13 @@ class Town extends Phaser.Scene {
   hud() {
     el("stats").textContent =
       `♥ ${this.lives} / 3   ·   Патроны ${this.ammo}/6   ·   ${this.kills}/${levels[selected].goal}   ·   ${this.score} очков`;
+    el("ammo-rounds").replaceChildren(
+      ...Array.from({ length: 6 }, (_, i) => {
+        const round = document.createElement("i");
+        round.className = i < this.ammo ? "round loaded" : "round empty";
+        return round;
+      }),
+    );
   }
   reload() {
     if (this.ended || this.paused || this.reloading || this.ammo === 6) return;
@@ -290,6 +302,10 @@ class Town extends Phaser.Scene {
   shoot(x: number, y: number) {
     if (this.ended || this.paused || this.reloading || this.ammo === 0) return;
     this.ammo--;
+    const revolver = el("revolver-icon");
+    revolver.classList.remove("firing");
+    void revolver.offsetWidth;
+    revolver.classList.add("firing");
     bang();
     const flash = this.add.circle(x, y, 13, 0xffe9a9, 0.8);
     this.tweens.add({
