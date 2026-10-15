@@ -17,30 +17,44 @@ async function shoot(page: Page, x: number, y: number) {
   );
   if(before>0) await expect.poll(()=>scene<number>(page,"s=>s.ammo")).toBe(before-1);
 }
-test("first level, reload, unlock and persistence", async ({ page }) => {
+test("first level is endless until three misses", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await expect(page.locator("canvas")).toBeAttached();
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
-  for (let i = 0; i < 8; i++) {
-    if (i === 6) {
-      await page.getByRole("button", { name: /Перезарядить/ }).click();
-      await expect.poll(() => scene(page, "s=>s.ammo")).toBe(6);
+  await page.evaluate(async () => {
+    const mod = await import("/src/main.ts");
+    const s = mod.game.scene.getScene("town") as any;
+    s.kills = 8;
+    s.score = 800;
+    s.nextSpawn = Number.POSITIVE_INFINITY;
+    s.targets = [];
+    s.hud();
+  });
+  expect(await scene(page, "s=>s.ended")).toBe(false);
+  await expect(page.locator("#result")).toBeHidden();
+  await shoot(page, 20, 500);
+  expect(await scene(page, "s=>s.lives")).toBe(2);
+  await page.evaluate(async () => {
+    const mod = await import("/src/main.ts");
+    const s = mod.game.scene.getScene("town") as any;
+    for (let i = 0; i < 2; i++) {
+      s.targets.push({
+        x: 230,
+        y: 253,
+        slot: i,
+        civilian: false,
+        view: { destroy() {} },
+        expires: s.clock - 1,
+      });
+      s.update(0, 0);
     }
-    await expect
-      .poll(() => scene<number>(page, "s=>s.targets.length"))
-      .toBeGreaterThan(0);
-    const target = await scene<{ x: number; y: number }>(
-      page,
-      "s=>({x:s.targets[0].x,y:s.targets[0].y})",
-    );
-    await shoot(page, target.x, target.y);
-  }
-  await expect(page.locator("#result-title")).toHaveText(
-    "Отличный выстрел, шериф!",
-  );
+  });
+  await expect(page.locator("#result-title")).toHaveText("Конец игры");
   await expect(page.locator("#result-text")).toContainText("800 очков");
+  await expect(page.getByRole("button", { name: "Начать заново" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Главное меню" })).toBeVisible();
   await page.reload();
   await expect(
     page.getByRole("button", { name: /02.*Мирные жители/ }),
@@ -81,14 +95,6 @@ test("civilian costs life, pause freezes timers, misses and defeat", async ({
   );
   await shoot(page, t.x, t.y);
   expect(await scene(page, "s=>s.lives")).toBe(2);
-  await page.getByRole("button", { name: "← Уровни" }).click();
-  await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
-  for (let i = 0; i < 7; i++) await shoot(page, 20, 500);
-  expect(await scene(page, "s=>s.ammo")).toBe(0);
-  await expect(page.locator("#result-title")).toHaveText(
-    "Город ждёт твоего возвращения",
-    { timeout: 12000 },
-  );
 });
 test("boss takes six hits and campaign completes", async ({ page }) => {
   await page.addInitScript(() =>

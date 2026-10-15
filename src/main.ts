@@ -278,8 +278,10 @@ class Town extends Phaser.Scene {
     this.hud();
   }
   hud() {
+    const progressText =
+      selected === 0 ? `Попадания ${this.kills}` : `${this.kills}/${levels[selected].goal}`;
     el("stats").textContent =
-      `♥ ${this.lives} / 3   ·   Патроны ${this.ammo}/6   ·   ${this.kills}/${levels[selected].goal}   ·   ${this.score} очков`;
+      `♥ ${this.lives} / 3   ·   Патроны ${this.ammo}/6   ·   ${progressText}   ·   ${this.score} очков`;
     el("ammo-rounds").replaceChildren(
       ...Array.from({ length: 6 }, (_, i) => {
         const round = document.createElement("i");
@@ -337,7 +339,11 @@ class Town extends Phaser.Scene {
           this.score += 100;
         }
         if (this.lives <= 0) this.finish(false);
-        else if (this.kills >= levels[selected].goal) this.finish(true);
+        else if (selected !== 0 && this.kills >= levels[selected].goal)
+          this.finish(true);
+      } else if (selected === 0) {
+        this.lives--;
+        if (this.lives <= 0) this.finish(false);
       }
     }
     this.hud();
@@ -346,7 +352,8 @@ class Town extends Phaser.Scene {
     if (this.ended) return;
     this.ended = true;
     let saved = true;
-    if (win) {
+    const endlessRun = selected === 0;
+    if (win || endlessRun) {
       progress = recordWin(progress, selected, this.score);
       try {
         storage.setItem("lastshot-progress", JSON.stringify(progress));
@@ -354,14 +361,19 @@ class Town extends Phaser.Scene {
         saved = false;
       }
     }
-    el("result-title").textContent = win
-      ? selected === 4
-        ? "Город свободен!"
-        : "Отличный выстрел, шериф!"
-      : "Город ждёт твоего возвращения";
-    el("result-text").textContent =
-      `${this.score} очков · ${this.kills} попаданий. ${win ? (saved ? "Прогресс сохранён." : "Сохранение недоступно: прогресс действует до закрытия страницы.") : "Попробуй снова: следи за патронами и береги жителей."}`;
-    el("next").hidden = !win || selected === 4;
+    el("result-title").textContent = endlessRun
+      ? "Конец игры"
+      : win
+        ? selected === 4
+          ? "Город свободен!"
+          : "Отличный выстрел, шериф!"
+        : "Город ждёт твоего возвращения";
+    el("result-text").textContent = endlessRun
+      ? `${this.score} очков · ${this.kills} бандитов. Три ошибки — и смена окончена. ${saved ? "Рекорд сохранён." : "Сохранение недоступно: рекорд действует до закрытия страницы."}`
+      : `${this.score} очков · ${this.kills} попаданий. ${win ? (saved ? "Прогресс сохранён." : "Сохранение недоступно: прогресс действует до закрытия страницы.") : "Попробуй снова: следи за патронами и береги жителей."}`;
+    el("retry").textContent = endlessRun ? "Начать заново" : "Ещё раз";
+    el("choose").textContent = endlessRun ? "Главное меню" : "Выбор уровня";
+    el("next").hidden = endlessRun || !win || selected === 4;
     el("result").hidden = false;
   }
   update(_time: number, delta: number) {
@@ -454,7 +466,7 @@ function menu() {
     const b = document.createElement("button");
     b.className = "level";
     b.disabled = i >= progress.unlocked;
-    b.innerHTML = `<b>${i === 4 ? "★" : String(i + 1).padStart(2, "0")}</b><span>${l.name}</span><small>${i >= progress.unlocked ? "ЗАКРЫТО" : progress.best[i] ? `РЕКОРД: ${progress.best[i]}` : i === 4 ? "БОСС · 6 HP" : `${l.goal} БАНДИТОВ`}</small>`;
+    b.innerHTML = `<b>${i === 4 ? "★" : String(i + 1).padStart(2, "0")}</b><span>${l.name}</span><small>${i >= progress.unlocked ? "ЗАКРЫТО" : progress.best[i] ? `РЕКОРД: ${progress.best[i]}` : i === 0 ? "БЕСКОНЕЧНЫЙ РЕЖИМ" : i === 4 ? "БОСС · 6 HP" : `${l.goal} БАНДИТОВ`}</small>`;
     b.onclick = () => start(i);
     el("levels").append(b);
   });
