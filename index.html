@@ -46,18 +46,6 @@
                   <span id="ammo-rounds"></span>
                 </div>
               </div>
-              <div id="crosshair">
-                <span></span>
-              </div>
-              <div id="revolver-icon">
-                <svg viewBox="0 0 124 78" role="img">
-                  <path class="gun-metal" d="M8 17h65l7 7h26v13H77l-12 9H39L29 35H8z" />
-                  <circle class="gun-cylinder" cx="55" cy="30" r="13" />
-                  <circle class="gun-pin" cx="55" cy="30" r="4" />
-                  <path class="gun-grip" d="M55 43h22l-2 9-14 21H43l8-27z" />
-                  <path class="gun-highlight" d="M13 21h59l5 5h27" />
-                </svg>
-              </div>
             </div>
           </div>
           <div class="controls">
@@ -66,7 +54,12 @@
           </div>
         </section>
         <section id="result" hidden aria-live="polite">
-          <div class="result-card" role="dialog" aria-modal="true" aria-labelledby="result-title">
+          <div
+            class="result-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="result-title"
+          >
             <h2 id="result-title"></h2>
             <p id="result-text"></p>
             <div class="result-actions">
