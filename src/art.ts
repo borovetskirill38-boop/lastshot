@@ -1,4 +1,6 @@
 import Phaser from "phaser";
+import townTexture from "./visuals/town.webp?inline";
+import peopleTexture from "./visuals/people.webp?inline";
 
 type Graphics = Phaser.GameObjects.Graphics;
 function poly(g: Graphics, color: number, points: number[], alpha = 1) {
@@ -36,167 +38,94 @@ function box(
   ]);
 }
 
-/** Layered, shaded procedural scenery: no remote assets in the offline build. */
+const townArtworkKey = "town-artwork";
+const sceneryKey = "town-scenery";
+const peopleKey = "western-people";
+const looks = {
+  bandit: ["mustache", "bandolier", "scar"],
+  civilian: ["shopkeeper", "basket", "rancher", "book"],
+} as const;
+const appearances = new WeakMap<
+  Phaser.Scene,
+  { bandit: number; civilian: number }
+>();
+
+/** Inline images load through Phaser, including when the HTML runs offline. */
+export function preloadArt(scene: Phaser.Scene) {
+  scene.load.image(townArtworkKey, townTexture);
+  scene.load.image(peopleKey, peopleTexture);
+}
+
+/** Pre-rendered lighting and materials keep the detailed environment inexpensive. */
 export function drawTown(
   scene: Phaser.Scene,
   slots: { x: number; y: number }[],
 ) {
-  const g = scene.add.graphics();
-  for (let y = 0; y < 420; y += 6) {
-    const color = Phaser.Display.Color.Interpolate.ColorWithColor(
-      new Phaser.Display.Color(122, 163, 172),
-      new Phaser.Display.Color(239, 208, 153),
-      420,
-      y,
-    );
-    g.fillStyle(
-      Phaser.Display.Color.GetColor(color.r, color.g, color.b),
-    ).fillRect(0, y, 960, 6);
-  }
-  g.fillStyle(0xffe7ae, 0.6).fillCircle(825, 63, 39);
-  poly(
-    g,
-    0xb9a083,
-    [0, 225, 0, 160, 55, 152, 90, 107, 143, 117, 175, 172, 252, 195, 310, 232],
-  );
-  poly(
-    g,
-    0xa58b75,
-    [
-      660, 231, 735, 170, 780, 179, 807, 135, 876, 124, 910, 192, 960, 177, 960,
-      260,
-    ],
-  );
-  g.fillStyle(0xc49660).fillRect(0, 420, 960, 120);
-  poly(g, 0x665040, [95, 459, 847, 459, 958, 533, 238, 533], 0.3);
-  box(g, 12, 231, 84, 197, 0x987354, 0xc29a70, 0x6c5140, 16);
-  box(g, 872, 215, 88, 213, 0xb88b5d, 0xd5aa77, 0x795b44, 13);
-  // Main facade and cornice, with cast shadows and recessed windows.
-  box(g, 108, 137, 740, 318, 0x865738, 0xc28b57, 0x4e362e, 17);
-  for (let y = 145; y < 450; y += 19) {
-    g.fillStyle(((y / 19) | 0) % 2 ? 0x9b6a43 : 0x91613e).fillRect(
-      117,
-      y,
-      722,
-      17,
-    );
-    g.lineStyle(1, 0xc08c58, 0.5).lineBetween(117, y, 839, y);
-    for (let x = 135; x < 835; x += 118)
-      g.fillStyle(0x503e32).fillCircle(x, y + 8, 1.3);
-  }
-  poly(g, 0x302c29, [108, 137, 848, 137, 848, 166, 108, 155], 0.45);
-  box(g, 94, 122, 768, 20, 0x543b2e, 0xc09260, 0x342a27, 11);
-  box(g, 111, 109, 735, 12, 0x9f7046, 0xdeac6d, 0x503c2d, 8);
-  box(g, 318, 65, 322, 65, 0xb78a50, 0xe8c184, 0x62472f, 8);
-  g.lineStyle(2, 0x754c32).strokeRect(326, 74, 306, 46);
-  scene.add
-    .text(480, 98, "S A L O O N", {
-      fontFamily: "Georgia",
-      fontSize: "33px",
-      color: "#392c25",
-      shadow: { offsetX: 1, offsetY: 2, color: "#e7bc7e", blur: 0, fill: true },
-    })
-    .setOrigin(0.5);
-  for (const s of slots) {
-    box(g, s.x - 62, s.y - 70, 124, 123, 0xc49a66, 0xe0ba7f, 0x694934, 5);
-    g.fillStyle(0x171e23).fillRect(s.x - 49, s.y - 58, 98, 104);
-    poly(g, 0x3c302b, [
-      s.x - 49,
-      s.y - 58,
-      s.x + 49,
-      s.y - 58,
-      s.x + 40,
-      s.y - 46,
-      s.x - 39,
-      s.y - 46,
-    ]);
-    g.fillStyle(0x252528).fillRect(s.x - 49, s.y - 46, 10, 92);
-    box(g, s.x - 69, s.y + 44, 138, 12, 0x8e603e, 0xe0b37a, 0x503b2d, 8);
-    // Open shutters remain outside the hit areas.
-    for (const sign of [-1, 1]) {
-      const x = s.x + sign * 67 - (sign < 0 ? 18 : 0);
-      box(g, x, s.y - 58, 18, 102, 0x79563a, 0xb88a53, 0x43362c, 3);
-      for (let y = s.y - 51; y < s.y + 40; y += 12)
-        g.lineStyle(2, 0x3e352c).lineBetween(x + 3, y, x + 15, y);
-    }
-  }
-  for (const x of [113, 839])
-    box(g, x, 143, 11, 312, 0xaa7c4b, 0xe6b87d, 0x564132, 5);
-  box(g, 66, 470, 830, 12, 0x795338, 0xc89a61, 0x50392d, 12);
-  for (let x = 85; x < 890; x += 54)
-    g.lineStyle(1, 0x76563e).lineBetween(x, 459, x - 5, 470);
-  // Barrel with curved staves, iron hoops and a shaded top.
-  for (const [x, y, scale] of [
-    [53, 430, 1],
-    [904, 438, 0.85],
-  ]) {
-    g.fillStyle(0x493b2d, 0.35).fillEllipse(
-      x + 12,
-      y + 35 * scale,
-      69 * scale,
-      18 * scale,
-    );
-    g.fillStyle(0x785136).fillRoundedRect(
-      x - 27 * scale,
-      y - 38 * scale,
-      54 * scale,
-      72 * scale,
-      12 * scale,
-    );
-    g.fillStyle(0xb2864e).fillRoundedRect(
-      x - 21 * scale,
-      y - 35 * scale,
-      19 * scale,
-      68 * scale,
-      7 * scale,
-    );
-    for (let i = -1; i <= 1; i++)
-      g.lineStyle(2, 0x594330).lineBetween(
-        x + i * 13 * scale,
-        y - 29 * scale,
-        x + i * 14 * scale,
-        y + 28 * scale,
+  if (!scene.textures.exists(sceneryKey)) {
+    const artwork = scene.textures
+      .get(townArtworkKey)
+      .getSourceImage() as HTMLImageElement;
+    const baked = scene.textures.createCanvas(sceneryKey, 960, 540)!;
+    const context = baked.context;
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    // Align painted openings to the original hit/surface coordinates once at load.
+    // Source landmarks are measured on the 942-pixel-tall environment artwork.
+    const rows = [
+      [0, 0],
+      [70, 65],
+      [196, 137],
+      [280, 183],
+      [315, 195],
+      [468, 297],
+      [502, 309],
+      [545, 335],
+      [578, 347],
+      [735, 449],
+      [765, 461],
+      [805, 482],
+      [942, 540],
+    ];
+    for (let i = 1; i < rows.length; i++) {
+      const [fromY, toY] = rows[i - 1];
+      const [nextFrom, nextTo] = rows[i];
+      context.drawImage(
+        artwork,
+        0,
+        (fromY * artwork.height) / 942,
+        artwork.width,
+        ((nextFrom - fromY) * artwork.height) / 942,
+        0,
+        toY,
+        960,
+        nextTo - toY,
       );
-    g.fillStyle(0x4b5350)
-      .fillRect(x - 27 * scale, y - 21 * scale, 54 * scale, 7 * scale)
-      .fillRect(x - 27 * scale, y + 16 * scale, 54 * scale, 7 * scale);
-    g.fillStyle(0xd0a56a).fillEllipse(
-      x,
-      y - 36 * scale,
-      48 * scale,
-      14 * scale,
-    );
-    g.lineStyle(3, 0x614932).strokeEllipse(
-      x,
-      y - 36 * scale,
-      48 * scale,
-      14 * scale,
-    );
+    }
+    baked.refresh();
   }
-  box(g, 8, 461, 52, 45, 0x967345, 0xd0a46c, 0x5e4833, 9);
-  g.lineStyle(4, 0x5e4833)
-    .lineBetween(12, 465, 56, 502)
-    .lineBetween(56, 465, 12, 502);
-  for (let i = 0; i < 55; i++)
-    g.fillStyle(i % 2 ? 0xa77a4d : 0xddb67a, 0.65).fillEllipse(
-      (i * 173) % 960,
-      493 + ((i * 13) % 43),
-      6 + (i % 4) * 3,
-      2,
-    );
-  scene.add.text(26, 24, "DUSTY TOWN · 1886", {
-    fontFamily: "monospace",
-    fontSize: "16px",
-    color: "#354b50",
-  });
-  // Bake static geometry once: mobile/software renderers need only one draw per frame.
-  const textureKey = "town-scenery";
-  if (scene.textures.exists(textureKey)) scene.textures.remove(textureKey);
-  g.generateTexture(textureKey, 960, 540);
-  scene.add.image(0, 0, textureKey).setOrigin(0).setDepth(-1);
-  g.destroy();
+  const source = scene.textures.get(sceneryKey).getSourceImage();
+  scene.add
+    .image(0, 0, sceneryKey)
+    .setOrigin(0)
+    .setDisplaySize(960, 540)
+    .setDepth(-1);
+  // Foreground sills hide the waist edge so people stand inside the windows.
+  for (const slot of slots) {
+    scene.add
+      .image(0, 0, sceneryKey)
+      .setOrigin(0)
+      .setDisplaySize(960, 540)
+      .setCrop(
+        ((slot.x - 70) * source.width) / 960,
+        ((slot.y + 44) * source.height) / 540,
+        (146 * source.width) / 960,
+        (14 * source.height) / 540,
+      )
+      .setDepth(15);
+  }
 }
 
+/** All appearances share one atlas; each role cycles without changing gameplay RNG. */
 export function createPerson(
   scene: Phaser.Scene,
   x: number,
@@ -204,55 +133,40 @@ export function createPerson(
   civilian: boolean,
   boss = false,
 ) {
-  const g = scene.add.graphics();
-  const coat = civilian ? 0x526c4c : boss ? 0x303846 : 0x714334;
-  const light = civilian ? 0x8da575 : boss ? 0x667383 : 0xb07750;
-  g.fillStyle(0x0b141c, 0.55).fillEllipse(3, 40, 72, 12);
-  poly(g, coat, [-23, 0, -33, 12, -35, 43, 34, 43, 31, 12, 20, 0]);
-  poly(g, light, [-23, 1, -7, -3, -5, 41, -27, 41, -26, 13]);
-  poly(g, 0x20272b, [12, 0, 27, 6, 33, 42, 18, 42]);
-  poly(g, 0xc5b28a, [-8, 2, 9, 2, 7, 35, -4, 35]);
-  poly(g, 0x3f3530, [-21, 0, -9, 0, -4, 22, -15, 16]);
-  g.fillStyle(0x72503c).fillRoundedRect(-19, -39, 38, 40, 9);
-  g.fillStyle(0xc08c62).fillRoundedRect(-18, -38, 33, 35, 8);
-  g.fillStyle(0xe9b986).fillRoundedRect(-15, -37, 22, 29, 7);
-  poly(g, 0xa56e4b, [6, -24, 15, -19, 14, -13, 5, -13]);
-  g.fillStyle(0x272a29).fillRect(-12, -24, 7, 3).fillRect(7, -24, 6, 3);
-  g.fillStyle(0x503f35).fillRect(-10, -29, 9, 2).fillRect(5, -29, 9, 2);
-  if (!civilian) poly(g, 0x3b302c, [-12, -10, 0, -13, 13, -9, 10, -4, -8, -4]);
-  // Rounded crown, bevelled brim and a sunlit edge.
-  g.fillStyle(0x1d2428).fillEllipse(2, -34, 77, 16);
-  g.fillStyle(boss ? 0x303340 : 0x614a34).fillRoundedRect(-24, -58, 46, 27, 8);
-  poly(
-    g,
-    boss ? 0x565866 : 0x9b7c4c,
-    [-21, -54, -9, -58, 10, -56, 14, -35, -21, -35],
-  );
-  g.fillStyle(boss ? 0x8f4840 : 0x322d27).fillRect(-23, -39, 45, 6);
-  g.fillStyle(boss ? 0x42434d : 0x826740).fillEllipse(-2, -33, 77, 10);
-  g.lineStyle(2, 0xc4a775, 0.8).lineBetween(-33, -34, -6, -36);
-  const scarf = civilian ? 0xe1d8a5 : 0xd44d35;
-  poly(g, scarf, [-19, -3, 0, 0, 18, -4, 13, 8, -3, 10, -19, 5]);
-  poly(g, civilian ? 0xb5ae80 : 0x872d29, [-3, 8, 10, 6, 16, 22, 3, 18]);
-  g.fillStyle(0xddb084).fillRoundedRect(20, 17, 14, 13, 4);
-  if (!civilian) {
-    box(g, 22, 12, 21, 7, 0x737d7b, 0xd8d9ba, 0x303e43, 3);
-    g.fillStyle(0x2b3032).fillRect(41, 12, 3, 7);
-    if (boss) {
-      poly(
-        g,
-        0xd7b65d,
-        Array.from({ length: 20 }, (_, i) => {
-          const a = (Math.floor(i / 2) * Math.PI) / 5 - Math.PI / 2;
-          const r = Math.floor(i / 2) % 2 ? 3 : 7;
-          return i % 2 ? 20 + Math.sin(a) * r : -17 + Math.cos(a) * r;
-        }),
-      );
-    }
-  } else {
-    box(g, 22, 9, 15, 22, 0xbe9d6c, 0xf3dab0, 0x876a48, 2);
+  const texture = scene.textures.get(peopleKey);
+  const source = texture.getSourceImage();
+  if (!texture.has("bandit-mustache")) {
+    const names = [
+      ...looks.bandit.map((look) => `bandit-${look}`),
+      "boss",
+      ...looks.civilian.map((look) => `civilian-${look}`),
+    ];
+    names.forEach((name, i) => {
+      const left = Math.round(((i % 4) * source.width) / 4);
+      const right = Math.round((((i % 4) + 1) * source.width) / 4);
+      const top = Math.round((Math.floor(i / 4) * source.height) / 2);
+      const bottom = Math.round(((Math.floor(i / 4) + 1) * source.height) / 2);
+      texture.add(name, 0, left, top, right - left, bottom - top);
+    });
   }
-  return scene.add.container(x, y, [g]).setDepth(10);
+  let counters = appearances.get(scene);
+  if (!counters) {
+    counters = { bandit: 0, civilian: 0 };
+    appearances.set(scene, counters);
+  }
+  const role = civilian ? "civilian" : "bandit";
+  const variant = boss
+    ? "boss"
+    : `${role}-${looks[role][counters[role]++ % looks[role].length]}`;
+  const shadow = scene.add.ellipse(2, 42, 66, 10, 0x080d12, 0.48);
+  const portrait = scene.add
+    .image(0, 0, peopleKey, variant)
+    .setOrigin(0.5, 0.57)
+    .setDisplaySize(84, 112);
+  return scene.add
+    .container(x, y, [shadow, portrait])
+    .setDepth(10)
+    .setData({ appearance: variant, civilian, boss });
 }
 
 /** First-person view model and transient effects all use gameplay delta (pause-safe). */

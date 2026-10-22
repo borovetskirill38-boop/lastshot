@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import "./style.css";
 import { GameAudio } from "./audio";
 import { hitsWood } from "./surfaces.js";
-import { drawTown, createPerson, ViewWeapon } from "./art";
+import { preloadArt, drawTown, createPerson, ViewWeapon } from "./art";
 import { levels, readProgress, recordWin } from "./rules.js";
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
@@ -19,6 +19,7 @@ try {
 }
 let progress = readProgress(storage),
   selected = 0;
+let townReady = false;
 export const gameAudio = new GameAudio();
 type Target = {
   x: number;
@@ -57,6 +58,9 @@ class Town extends Phaser.Scene {
   constructor() {
     super("town");
   }
+  preload() {
+    preloadArt(this);
+  }
   create() {
     this.drawTown();
     this.weapon = new ViewWeapon(this);
@@ -71,6 +75,8 @@ class Town extends Phaser.Scene {
     this.game.events.on("blur", () => {
       if (!this.ended && !this.paused) this.togglePause();
     });
+    townReady = true;
+    menu();
   }
   drawTown() {
     drawTown(this, this.slots);
@@ -319,7 +325,7 @@ function menu() {
   levels.forEach((l, i) => {
     const b = document.createElement("button");
     b.className = "level";
-    b.disabled = i >= progress.unlocked;
+    b.disabled = !townReady || i >= progress.unlocked;
     b.innerHTML = `<b>${i === 4 ? "★" : String(i + 1).padStart(2, "0")}</b><span>${l.name}</span><small>${i >= progress.unlocked ? "ЗАКРЫТО" : progress.best[i] ? `РЕКОРД: ${progress.best[i]}` : i === 0 ? "БЕСКОНЕЧНЫЙ РЕЖИМ" : i === 4 ? "БОСС · 6 HP" : `${l.goal} БАНДИТОВ`}</small>`;
     b.addEventListener("pointerenter", (event) => {
       if (!b.disabled && event.pointerType !== "touch") gameAudio.play("hover");
@@ -329,6 +335,7 @@ function menu() {
   });
 }
 function start(i: number) {
+  if (!townReady) return;
   selected = i;
   el("menu").hidden = true;
   el("result").hidden = true;
