@@ -159,7 +159,7 @@ class Town extends Phaser.Scene {
     if (selected === 4) {
       if (this.bossOpen && Math.abs(x - 480) < 42 && y > 255 && y < 359) {
         hitPerson = true;
-        gameAudio.play(this.bossHP === 1 ? "banditDeath" : "pain", pan);
+        gameAudio.play(this.bossHP === 1 ? "bossDeath" : "pain", pan);
         this.bossHP--;
         this.bossHit = true;
         this.kills++;

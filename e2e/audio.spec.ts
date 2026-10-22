@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 
 test("recordings decode, produce an audio signal, and obey mute and voice limits", async ({
   page,
@@ -47,7 +49,7 @@ test("recordings decode, produce an audio signal, and obey mute and voice limits
     gameAudio.play("shot");
     return { summaries, signal, active, muted: gameAudio.state };
   });
-  expect(result.summaries).toHaveLength(11);
+  expect(result.summaries).toHaveLength(10);
   for (const b of result.summaries) {
     expect(b.duration).toBeGreaterThan(b.name === "hover" ? 0.06 : 0.18);
     expect(b.duration).toBeLessThan(60);
@@ -188,7 +190,7 @@ test("hits route to the right material and reload audio pauses, resumes and canc
     return { wounded, fatal: [...events], ended: s.ended };
   });
   expect(boss.wounded).toEqual(["shot", "pain"]);
-  expect(boss.fatal).toEqual(["shot", "banditDeath"]);
+  expect(boss.fatal).toEqual(["shot", "bossDeath"]);
   expect(boss.ended).toBe(true);
   expect(errors).toEqual([]);
 });
@@ -401,4 +403,62 @@ test("mode hover cues fire once per button entry and selection opens the saloon 
   });
   expect(active.background).toEqual([]);
   expect(active.door).toBe(true);
+});
+
+test("bandits share the boss hurt voice, civilians raise its pitch, and boss recordings stay intact", async ({
+  page,
+}) => {
+  // Preserve both boss recordings byte for byte, including its separate fatal cry.
+  for (const [file, hash] of [
+    [
+      "pain.mp3",
+      "ab7d4587581350314ac954d33712b85635c54678498a0740200133a1f3a83516",
+    ],
+    [
+      "bandit-death.mp3",
+      "a565b7f6495698d79e96cba6ae36e969fc8a17826aa89de90bed12190a3428f6",
+    ],
+  ]) {
+    const bytes = await readFile(`src/audio/${file}`);
+    expect(createHash("sha256").update(bytes).digest("hex")).toBe(hash);
+  }
+  await page.goto("/");
+  await page.getByRole("button", { name: "Переключить звук" }).click();
+  await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
+  const voices = await page.evaluate(async () => {
+    const { gameAudio } = await import("/src/main.ts");
+    gameAudio.setMenu(false);
+    const a = gameAudio as any;
+    const original = AudioParam.prototype.linearRampToValueAtTime;
+    let level = 0;
+    AudioParam.prototype.linearRampToValueAtTime = function (value, time) {
+      level = value;
+      return original.call(this, value, time);
+    };
+    try {
+      const kinds = ["pain", "banditDeath", "civilianDeath", "bossDeath"] as const;
+      return kinds.map((kind) => {
+        gameAudio.stop();
+        gameAudio.play(kind);
+        const voice = [...a.voices][0] as any;
+        return {
+          kind,
+          hurt: voice.source.buffer === a.buffers.get("pain"),
+          fatal: voice.source.buffer === a.buffers.get("bossDeath"),
+          rate: voice.source.playbackRate.value,
+          level,
+        };
+      });
+    } finally {
+      AudioParam.prototype.linearRampToValueAtTime = original;
+      gameAudio.stop();
+    }
+  });
+  expect(voices.map((v) => v.hurt)).toEqual([true, true, true, false]);
+  expect(voices.map((v) => v.fatal)).toEqual([false, false, false, true]);
+  expect(voices.map((v) => v.level)).toEqual([0.55, 0.55, 0.55, 0.68]);
+  expect(voices[0].rate).toBe(1);
+  expect(voices[1].rate).toBe(1);
+  expect(voices[2].rate).toBeCloseTo(2 ** (2 / 12), 5);
+  expect(voices[3].rate).toBe(1);
 });

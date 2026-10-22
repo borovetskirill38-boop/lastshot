@@ -2,8 +2,7 @@ import shot from "./audio/shot.mp3?inline";
 import reload from "./audio/reload.mp3?inline";
 import wood1 from "./audio/wood-1.mp3?inline";
 import wood2 from "./audio/wood-2.mp3?inline";
-import banditDeath from "./audio/bandit-death.mp3?inline";
-import civilianDeath from "./audio/civilian-death.mp3?inline";
+import bossDeath from "./audio/bandit-death.mp3?inline";
 import menuMusic from "./audio/menu-music.mp3?inline";
 import menuAmbience from "./audio/menu-ambience.mp3?inline";
 import pain from "./audio/pain.mp3?inline";
@@ -15,8 +14,7 @@ const clips = {
   reload,
   wood1,
   wood2,
-  banditDeath,
-  civilianDeath,
+  bossDeath,
   menuMusic,
   menuAmbience,
   pain,
@@ -28,6 +26,7 @@ export type SoundEffect =
   | "shot"
   | "reload"
   | "wood"
+  | "bossDeath"
   | "banditDeath"
   | "civilianDeath"
   | "pain"
@@ -37,8 +36,9 @@ const variants: Record<SoundEffect, Clip[]> = {
   shot: ["shot"],
   reload: ["reload"],
   wood: ["wood1", "wood2"],
-  banditDeath: ["banditDeath"],
-  civilianDeath: ["civilianDeath"],
+  bossDeath: ["bossDeath"],
+  banditDeath: ["pain"],
+  civilianDeath: ["pain"],
   pain: ["pain"],
   door: ["door"],
   hover: ["hover"],
@@ -47,8 +47,9 @@ const volumes: Record<SoundEffect, number> = {
   shot: 0.48,
   reload: 0.48,
   wood: 0.46,
-  banditDeath: 0.68,
-  civilianDeath: 0.7,
+  bossDeath: 0.68,
+  banditDeath: 0.55,
+  civilianDeath: 0.55,
   pain: 0.55,
   door: 0.48,
   hover: 0.15,
@@ -270,9 +271,14 @@ export class GameAudio {
     const source = context.createBufferSource(),
       gain = context.createGain();
     source.buffer = buffer;
-    // Keep human recordings at their natural pitch; the gun is one immutable take.
+    // Civilians share the boss hurt recording, raised by two semitones.
+    // Boss voices and the fixed gun take retain their original pitch.
     source.playbackRate.value =
-      kind === "wood" ? 0.98 + Math.random() * 0.04 : 1;
+      kind === "civilianDeath"
+        ? 2 ** (2 / 12)
+        : kind === "wood"
+          ? 0.98 + Math.random() * 0.04
+          : 1;
     const start = context.currentTime;
     const output = kind === "shot" ? this.shotOutput! : this.effectOutput!;
     gain.gain.setValueAtTime(0, start);

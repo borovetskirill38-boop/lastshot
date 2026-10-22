@@ -31,16 +31,17 @@ game. Full license: LICENSE-CC-BY-4.0.txt.
 ## Human cries — Flare contributors, CC BY-SA 3.0
 
 The new voices are human character voice recordings from the open Flare project,
-not the former Red Eclipse hurt/death effects. They play at natural pitch.
+not the former Red Eclipse hurt/death effects. Bandits and the boss play at
+natural pitch; civilians use the boss hurt recording raised by two semitones
+at playback (rate `2 ** (2 / 12)`).
 
 Source: flareteam/flare-game, commit `af6eee6d339ac98011864bfe89da837fe7769c28`.
 https://github.com/flareteam/flare-game/tree/af6eee6d339ac98011864bfe89da837fe7769c28/mods/fantasycore/soundfx
 
-| Adaptation         | Original recording                      |
-| ------------------ | --------------------------------------- |
-| bandit-death.mp3   | mods/fantasycore/soundfx/male_die.ogg   |
-| civilian-death.mp3 | mods/fantasycore/soundfx/female_die.ogg |
-| pain.mp3           | mods/fantasycore/soundfx/male_hit.ogg   |
+| Adaptation       | Original recording                    |
+| ---------------- | ------------------------------------- |
+| bandit-death.mp3 | mods/fantasycore/soundfx/male_die.ogg |
+| pain.mp3         | mods/fantasycore/soundfx/male_hit.ogg |
 
 Credit: Flare contributors and the artists listed in the unabridged original
 FLARE-CREDITS.txt included alongside these files. Source licensing is the Flare
@@ -49,25 +50,28 @@ https://creativecommons.org/licenses/by-sa/3.0/
 These audio adaptations are distributed under that same license.
 
 Processing: mono 44.1 kHz / 128 kbit/s MP3, peak normalization, at most a few
-milliseconds of padding, and a 20 ms tail fade. Original pitch is preserved;
-there is no ring modulation, synthesized voice, or metallic body-hit layer.
-Bandit/civilian cries start alongside the gun recording. Bosses use a short
-human hurt voice until the fatal shot, when the bandit death voice is used.
+milliseconds of padding, and a 20 ms tail fade. There is no ring modulation,
+synthesized voice, or metallic body-hit layer. Bandit/civilian cries start
+alongside the gun recording. Both now use `pain.mp3`: the bandit at natural
+pitch and the civilian two semitones higher, both at the boss hurt volume.
+Boss wounded (`pain.mp3`) and fatal (`bandit-death.mp3`, retained filename)
+recordings, pitch and levels are unchanged; the latter has its own `bossDeath`
+event so bandit voice changes cannot affect it.
 
 ## One fixed real revolver shot — CC0 1.0
 
-`shot.mp3` is a real **Smith & Wesson 642, .38 Special** revolver recording from
+`shot.mp3` is a real **Ruger Single Six, single-action .22** revolver recording from
 **The Free Firearm Sound Library**, recorded by **Ben Jaszczak, Brian Nelson,
 Kevin Heras and Matthew Nanney**.
 https://opengameart.org/content/the-free-firearm-sound-library
 
 Mirror: blkpanfa/sidekick-sounds, commit `4f3a077c12057b4f91e14803a7e3c9d564f6afaa`.
-Original: `gun/revolver/smith-wesson-642-near-shot1.flac` (manifest original `V_27P.wav`).
+Original: `gun/revolver/ruger-single-six-near-shot1.flac` (manifest original `S_14P.wav`).
 Original SHA-256, verified before conversion:
-`bb0810dbe7d6ff00417e423a76ae38bf1aba23ea034ed3df51c5dfe7076c647a`.
+`b9db170fe8df4385a3887784e23d8358cc1bc32096224d9aa5f6752216669a27`.
 
-Processing: 35 Hz high-pass, mono, normalization to 0.8, tail trimmed to 1.35 s,
-40 ms end fade, 44.1 kHz / 128 kbit/s MP3. This is the same take for every shot,
+Processing: 35 Hz high-pass, mono, normalization to 0.8, tail trimmed to 1.6 s,
+50 ms end fade, 44.1 kHz / 192 kbit/s MP3. This is the same take for every shot,
 with fixed rate, level and centered pan. The former second take is removed.
 Independent gun and impact compressor buses keep an impact from ducking the gun.
 All hit cues start concurrently; no impact cue replaces or stops the shot.

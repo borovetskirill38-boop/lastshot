@@ -8,7 +8,6 @@ async function scene<T>(page: Page, fn: string): Promise<T> {
 }
 async function shoot(page: Page, x: number, y: number) {
   await page.locator("canvas").scrollIntoViewIfNeeded();
-  await page.locator("canvas").scrollIntoViewIfNeeded();
   const box = await page.locator("canvas").boundingBox();
   if (!box) throw Error("Missing canvas");
   const before = await scene<number>(page, "s=>s.ammo");
@@ -26,20 +25,26 @@ test("first level is endless until three misses", async ({ page }) => {
   await expect(page.locator("canvas")).toBeAttached();
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
   await expect(page.locator("#life-count")).toHaveText("3/3");
+  // Pace real spawns so browser/reload latency cannot expire unrelated targets.
+  // This scenario checks eight hits followed by exactly three deliberate misses.
+  await scene(page, "s=>{s.nextSpawn=Infinity;}");
   for (let i = 0; i < 8; i++) {
     if (i === 6) {
       await page.getByRole("button", { name: /Перезарядить/ }).click();
       await expect.poll(() => scene(page, "s=>s.ammo")).toBe(6);
     }
+    await scene(page, "s=>{s.nextSpawn=s.clock;}");
     await expect
       .poll(() => scene<number>(page, "s=>s.targets.length"))
       .toBeGreaterThan(0);
     const target = await scene<{ x: number; y: number }>(
       page,
-      "s=>({x:s.targets[0].x,y:s.targets[0].y})",
+      "s=>{s.nextSpawn=Infinity;return {x:s.targets[0].x,y:s.targets[0].y};}",
     );
     await shoot(page, target.x, target.y);
+    expect(await scene(page, "s=>s.kills")).toBe(i + 1);
   }
+  expect(await scene(page, "s=>s.lives")).toBe(3);
   expect(await scene(page, "s=>s.ended")).toBe(false);
   await expect(page.locator("#result")).toBeHidden();
   await shoot(page, 20, 500);
