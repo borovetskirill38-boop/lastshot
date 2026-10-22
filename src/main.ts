@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import "./style.css";
 import { GameAudio } from "./audio";
+import { Armory } from "./armory";
 import { hitsWood } from "./surfaces.js";
 import { preloadArt, drawTown, createPerson, ViewWeapon } from "./art";
 import { levels, readProgress, recordWin } from "./rules.js";
@@ -21,6 +22,7 @@ let progress = readProgress(storage),
   selected = 0;
 let townReady = false;
 export const gameAudio = new GameAudio();
+const armory = new Armory(storage);
 type Target = {
   x: number;
   y: number;
@@ -33,7 +35,9 @@ class Town extends Phaser.Scene {
   weapon!: ViewWeapon;
   clock = 0;
   targets: Target[] = [];
-  ammo = 6;
+  weaponId = armory.equipped.id;
+  capacity = armory.equipped.capacity;
+  ammo = this.capacity;
   lives = 3;
   score = 0;
   kills = 0;
@@ -95,7 +99,11 @@ class Town extends Phaser.Scene {
     this.bossBar = undefined;
     this.bossOpen = false;
     this.bossHit = false;
-    this.ammo = 6;
+    this.weaponId = armory.equipped.id;
+    this.capacity = armory.equipped.capacity;
+    this.ammo = this.capacity;
+    this.weapon.setWeapon(this.weaponId);
+    el("equipped-name").textContent = `В руках: ${armory.equipped.name}`;
     this.lives = 3;
     this.score = 0;
     this.kills = 0;
@@ -115,9 +123,9 @@ class Town extends Phaser.Scene {
         ? `Попадания ${this.kills}`
         : `${this.kills}/${levels[selected].goal}`;
     el("stats").textContent =
-      `♥ ${this.lives} / 3   ·   Патроны ${this.ammo}/6   ·   ${progressText}   ·   ${this.score} очков`;
+      `♥ ${this.lives} / 3   ·   Патроны ${this.ammo}/${this.capacity}   ·   ${progressText}   ·   ${this.score} очков`;
     el("ammo-rounds").replaceChildren(
-      ...Array.from({ length: 6 }, (_, i) => {
+      ...Array.from({ length: this.capacity }, (_, i) => {
         const round = document.createElement("i");
         round.className = i < this.ammo ? "round loaded" : "round empty";
         return round;
@@ -134,7 +142,7 @@ class Town extends Phaser.Scene {
     );
   }
   reload() {
-    if (this.ended || this.paused || this.reloading || this.ammo === 6) return;
+    if (this.ended || this.paused || this.reloading || this.ammo === this.capacity) return;
     this.reloading = true;
     this.reloadEnd = this.clock + 1100;
     gameAudio.play("reload");
@@ -153,6 +161,7 @@ class Town extends Phaser.Scene {
     this.weapon.fire();
     gameAudio.play("shot");
     let hitPerson = false;
+    let outcome: "enemy" | "civilian" | "miss" = "miss";
     const pan = (x - 480) / 480;
     const flash = this.add.circle(x, y, 13, 0xffe9a9, 0.8);
     this.tweens.add({
@@ -165,6 +174,7 @@ class Town extends Phaser.Scene {
     if (selected === 4) {
       if (this.bossOpen && Math.abs(x - 480) < 42 && y > 255 && y < 359) {
         hitPerson = true;
+        outcome = "enemy";
         gameAudio.play(this.bossHP === 1 ? "bossDeath" : "pain", pan);
         this.bossHP--;
         this.bossHit = true;
@@ -179,6 +189,7 @@ class Town extends Phaser.Scene {
       );
       if (t) {
         hitPerson = true;
+        outcome = t.civilian ? "civilian" : "enemy";
         gameAudio.play(t.civilian ? "civilianDeath" : "banditDeath", pan);
         t.view.destroy();
         this.targets = this.targets.filter((v) => v !== t);
@@ -195,6 +206,7 @@ class Town extends Phaser.Scene {
         if (this.lives <= 0) this.finish(false);
       }
     }
+    armory.record(this.weaponId, outcome);
     if (!hitPerson && hitsWood(x, y, this.slots)) gameAudio.play("wood", pan);
     this.hud();
   }
@@ -238,7 +250,7 @@ class Town extends Phaser.Scene {
     if (this.reloading && time >= this.reloadEnd) {
       this.reloading = false;
       gameAudio.stop("reload");
-      this.ammo = 6;
+      this.ammo = this.capacity;
       el("reload").textContent = "Перезарядить · R";
       this.hud();
     }
@@ -321,6 +333,9 @@ function menu() {
   el("play").hidden = true;
   el("result").hidden = true;
   el("menu").hidden = false;
+  el("arsenal").hidden = true;
+  el<HTMLButtonElement>("arsenal-open").disabled = !townReady;
+  document.body.classList.remove("in-arsenal");
   document.body.classList.add("in-menu");
   window.scrollTo(0, 0);
   document.querySelector(".saloon-transition")?.remove();
@@ -356,7 +371,8 @@ function menu() {
 }
 function start(i: number) {
   if (!townReady) return;
-  document.body.classList.remove("in-menu");
+  document.body.classList.remove("in-menu", "in-arsenal");
+  el("arsenal").hidden = true;
   // The overlay opens over the live scene without delaying input or sound.
   document.querySelector(".saloon-transition")?.remove();
   const entrance = document.createElement("div");
@@ -379,6 +395,29 @@ function start(i: number) {
   window.scrollTo(0, 0);
   gameAudio.play("door");
 }
+el("arsenal-open").onclick = () => {
+  if (!townReady) return;
+  scene.ended = true;
+  el("menu").hidden = true;
+  el("play").hidden = true;
+  el("arsenal").hidden = false;
+  document.body.classList.remove("in-menu");
+  document.body.classList.add("in-arsenal");
+  armory.open();
+  window.scrollTo(0, 0);
+  el("arsenal-title").focus({ preventScroll: true });
+  gameAudio.play("door");
+};
+el("arsenal-back").onclick = () => {
+  menu();
+  el("arsenal-open").focus({ preventScroll: true });
+};
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !el("arsenal").hidden) {
+    event.preventDefault();
+    el("arsenal-back").click();
+  }
+});
 el("reload").onclick = () => scene.reload();
 el("pause").onclick = () => scene.togglePause();
 el("back").onclick = menu;

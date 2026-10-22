@@ -34,3 +34,20 @@ The weapon uses gameplay delta for aim lag, breathing, recoil and reload lowerin
 The light flare and brass case use small cached canvas textures. Pausing freezes
 all weapon animation and a new run clears the effects. All artwork is shared and
 loaded once; no image is generated or downloaded per shot.
+
+## Workshop and selectable weapons
+
+- `workshop.webp`: original carpenter/gunsmith room, lantern, hand tools, wooden
+  workbench and frontier props. Quality 92 WebP, used as the workshop background.
+- `weapon-icons.webp`: original unbranded realistic revolver profile atlas,
+  1254×1254. Measured row bounds are 0–500, 500–880 and 880–1254. SVG view boxes
+  and clipping isolate each full silhouette while preserving its proportions.
+  Names are fictional; no manufacturer logos or third-party icon packs are used.
+- `arsenal-models.webp`: transparent 1536×1024 atlas with two first-person models:
+  compact pocket revolver (left) and brass-accent long revolver (right). Quality
+  96 WebP; the six-shot classic retains `revolver-hand.webp`. Each appearance has
+  measured muzzle/cylinder anchors and flash direction, sharing the same effects.
+
+Selection and statistics do not depend on artwork decoding or image pixels. The
+selected model and magazine capacity apply when a new run begins. Images remain
+embedded in the standalone HTML; no network is needed for the workshop.

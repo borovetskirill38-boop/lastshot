@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import townTexture from "./visuals/town.webp?inline";
 import peopleTexture from "./visuals/people.webp?inline";
 import weaponTexture from "./visuals/revolver-hand.webp?inline";
+import arsenalModels from "./visuals/arsenal-models.webp?inline";
 
 type Graphics = Phaser.GameObjects.Graphics;
 const townArtworkKey = "town-artwork";
@@ -21,6 +22,7 @@ export function preloadArt(scene: Phaser.Scene) {
   scene.load.image(townArtworkKey, townTexture);
   scene.load.image(peopleKey, peopleTexture);
   scene.load.image("revolver-hand", weaponTexture);
+  scene.load.image("arsenal-models", arsenalModels);
 }
 
 /** Pre-rendered lighting and materials keep the detailed environment inexpensive. */
@@ -239,6 +241,37 @@ export class ViewWeapon {
       this.crosshair.lineBetween(x, y, ex, ey);
     this.reset();
   }
+  setWeapon(weaponId: string) {
+    if (weaponId === "last-word") {
+      this.model.setTexture("revolver-hand")
+        .setPosition(25, -2).setOrigin(0.5, 0.78).setDisplaySize((250 * 2) / 3, 250);
+      this.muzzleLocal.set(-18, -172);
+      this.cylinderLocal.set(25, -111);
+      this.flash.setRotation(-0.68);
+    } else {
+      const texture = this.scene.textures.get("arsenal-models");
+      const source = texture.getSourceImage();
+      if (!texture.has("pocket")) {
+        const half = Math.round(source.width / 2);
+        texture.add("pocket", 0, 0, 0, half, source.height);
+        texture.add("long", 0, half, 0, source.width - half, source.height);
+      }
+      this.model.setTexture("arsenal-models", weaponId === "dust-companion" ? "pocket" : "long")
+        .setPosition(25, -2).setOrigin(0.5, 0.78)
+        .setDisplaySize(250 * source.width / 2 / source.height, 250);
+      if (weaponId === "dust-companion") {
+        this.muzzleLocal.set(-32, -150);
+        this.cylinderLocal.set(4, -122);
+        this.flash.setRotation(-0.75);
+      } else {
+        this.muzzleLocal.set(-60, -175);
+        this.cylinderLocal.set(13, -106);
+        this.flash.setRotation(-0.82);
+      }
+    }
+    this.flash.setPosition(this.muzzleLocal.x, this.muzzleLocal.y);
+  }
+
   aim(x: number, y: number) {
     this.aimX = Phaser.Math.Clamp(x, 0, 960);
     this.aimY = Phaser.Math.Clamp(y, 0, 540);

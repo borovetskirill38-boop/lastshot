@@ -48,3 +48,33 @@ test("single HTML runs offline with weapon and no external dependencies", async 
   expect(requests).toEqual([]);
   await context.close();
 });
+
+test("offline mobile workshop equips a weapon, uses its capacity and keeps shot totals without external requests", async ({ browser }) => {
+  const context = await browser.newContext({ offline: true, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  const requests: string[] = [], errors: string[] = [];
+  page.on("request", (r) => requests.push(r.url()));
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.setContent(await readFile("lastshot.html", "utf8"));
+  await page.getByRole("button", { name: /^Арсенал/ }).tap();
+  await page.getByRole("button", { name: "Дальний дозор", exact: true }).tap();
+  await expect(page.locator("#weapon-capacity")).toHaveText("8");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "Взять оружие", exact: true }).tap();
+  await page.screenshot({ path: "test-results/arsenal-offline-mobile.png", fullPage: true });
+  await page.getByRole("button", { name: "← Главное меню", exact: true }).tap();
+  await page.getByRole("button", { name: /01.*Первый выстрел/ }).tap();
+  await expect(page.locator("#stats")).toContainText("Патроны 8/8");
+  const box = await page.locator("canvas").boundingBox();
+  await page.touchscreen.tap(box!.x + 10, box!.y + 10);
+  await expect(page.locator("#stats")).toContainText("Патроны 7/8");
+  await page.getByRole("button", { name: /Перезарядить/ }).tap();
+  await expect(page.locator("#stats")).toContainText("Патроны 8/8");
+  await page.getByRole("button", { name: "← Уровни" }).tap();
+  await page.getByRole("button", { name: /^Арсенал/ }).tap();
+  await expect(page.locator("#weapon-name")).toHaveText("Дальний дозор");
+  await expect(page.locator("#weapon-misses")).toHaveText("1");
+  expect(requests).toEqual([]);
+  expect(errors).toEqual([]);
+  await context.close();
+});
