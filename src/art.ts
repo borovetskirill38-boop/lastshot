@@ -1,43 +1,9 @@
 import Phaser from "phaser";
 import townTexture from "./visuals/town.webp?inline";
 import peopleTexture from "./visuals/people.webp?inline";
+import weaponTexture from "./visuals/revolver-hand.webp?inline";
 
 type Graphics = Phaser.GameObjects.Graphics;
-function poly(g: Graphics, color: number, points: number[], alpha = 1) {
-  g.fillStyle(color, alpha);
-  g.fillPoints(
-    Array.from(
-      { length: points.length / 2 },
-      (_, i) => new Phaser.Geom.Point(points[i * 2], points[i * 2 + 1]),
-    ),
-    true,
-  );
-}
-function box(
-  g: Graphics,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  front: number,
-  top: number,
-  side: number,
-  d = 7,
-) {
-  g.fillStyle(front).fillRect(x, y, w, h);
-  poly(g, top, [x, y, x + d, y - d, x + w + d, y - d, x + w, y]);
-  poly(g, side, [
-    x + w,
-    y,
-    x + w + d,
-    y - d,
-    x + w + d,
-    y + h - d,
-    x + w,
-    y + h,
-  ]);
-}
-
 const townArtworkKey = "town-artwork";
 const sceneryKey = "town-scenery";
 const peopleKey = "western-people";
@@ -54,6 +20,7 @@ const appearances = new WeakMap<
 export function preloadArt(scene: Phaser.Scene) {
   scene.load.image(townArtworkKey, townTexture);
   scene.load.image(peopleKey, peopleTexture);
+  scene.load.image("revolver-hand", weaponTexture);
 }
 
 /** Pre-rendered lighting and materials keep the detailed environment inexpensive. */
@@ -169,11 +136,68 @@ export function createPerson(
     .setData({ appearance: variant, civilian, boss });
 }
 
+/** Small cached light/casing textures complement the photographic view model. */
+function createWeaponEffects(scene: Phaser.Scene) {
+  if (!scene.textures.exists("weapon-flare")) {
+    const texture = scene.textures.createCanvas("weapon-flare", 128, 160)!;
+    const c = texture.context;
+    c.translate(64, 132);
+    const halo = c.createRadialGradient(0, -13, 1, 0, -13, 60);
+    halo.addColorStop(0, "rgba(255,237,173,0.95)");
+    halo.addColorStop(0.25, "rgba(255,169,55,0.45)");
+    halo.addColorStop(1, "rgba(255,98,15,0)");
+    c.fillStyle = halo;
+    c.fillRect(-64, -100, 128, 128);
+    const flame = c.createLinearGradient(0, -70, 0, 2);
+    flame.addColorStop(0, "rgba(255,131,30,0)");
+    flame.addColorStop(0.4, "rgba(255,191,76,0.9)");
+    flame.addColorStop(1, "#fff8dd");
+    c.fillStyle = flame;
+    c.beginPath();
+    c.moveTo(-6, 0);
+    c.quadraticCurveTo(-22, -20, -19, -34);
+    c.quadraticCurveTo(-7, -22, -3, -73);
+    c.quadraticCurveTo(8, -46, 9, -28);
+    c.quadraticCurveTo(26, -40, 14, -12);
+    c.quadraticCurveTo(11, 0, -6, 0);
+    c.fill();
+    texture.refresh();
+  }
+  if (!scene.textures.exists("weapon-brass")) {
+    const texture = scene.textures.createCanvas("weapon-brass", 64, 22)!;
+    const c = texture.context;
+    const metal = c.createLinearGradient(0, 2, 0, 20);
+    metal.addColorStop(0, "#6b431b");
+    metal.addColorStop(0.32, "#fff0ad");
+    metal.addColorStop(0.55, "#d7a548");
+    metal.addColorStop(1, "#805324");
+    c.fillStyle = metal;
+    c.fillRect(7, 3, 50, 16);
+    c.fillStyle = "#e2bd69";
+    c.beginPath();
+    c.ellipse(7, 11, 5, 10, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#775024";
+    c.beginPath();
+    c.ellipse(57, 11, 4, 8, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#b29b68";
+    c.beginPath();
+    c.ellipse(6, 11, 2, 4, 0, 0, Math.PI * 2);
+    c.fill();
+    texture.refresh();
+  }
+}
+
 /** First-person view model and transient effects all use gameplay delta (pause-safe). */
 export class ViewWeapon {
   readonly view: Phaser.GameObjects.Container;
   readonly crosshair: Graphics;
-  readonly flash: Graphics;
+  readonly model: Phaser.GameObjects.Image;
+  readonly flash: Phaser.GameObjects.Image;
+  private readonly muzzleLocal = new Phaser.Math.Vector2(-18, -172);
+  private readonly cylinderLocal = new Phaser.Math.Vector2(25, -111);
+  private age = 0;
   readonly smoke: Graphics;
   readonly effects: Phaser.GameObjects.Container;
   aimX = 480;
@@ -189,71 +213,18 @@ export class ViewWeapon {
     age: number;
   }[] = [];
   constructor(private scene: Phaser.Scene) {
-    const g = scene.add.graphics();
-    // Sleeve and right hand behind the grip.
-    poly(g, 0x292f36, [-16, 7, 32, 12, 76, 104, -27, 104, -38, 49]);
-    poly(g, 0x556371, [-17, 24, 15, 29, 43, 104, -22, 104, -32, 49]);
-    poly(
-      g,
-      0xd9aa7c,
-      [-31, -37, -14, -50, 9, -44, 23, -20, 20, 18, 1, 34, -24, 18, -37, -6],
-    );
-    poly(g, 0x976345, [6, -35, 20, -19, 20, 17, 1, 33, -7, 12]);
-    // Walnut grip, steel frame and open trigger guard.
-    poly(g, 0x312b27, [-19, -68, 16, -62, 29, -4, 14, 29, -10, 25, -25, -26]);
-    poly(g, 0x8d5130, [-16, -57, 10, -53, 22, 0, 12, 20, -5, 17, -19, -23]);
-    for (let i = 0; i < 6; i++)
-      g.lineStyle(2, 0xc88a4a, 0.6).lineBetween(
-        -12,
-        -42 + i * 9,
-        12,
-        -36 + i * 9,
-      );
-    g.lineStyle(5, 0x879397).strokeEllipse(-21, -52, 40, 41);
-    g.lineStyle(2, 0xdce1d2).strokeEllipse(-23, -54, 36, 37);
-    g.lineStyle(4, 0x424b52).lineBetween(-16, -67, -19, -52);
-    // Cylinder and frame seen obliquely from the right shoulder.
-    box(g, -27, -101, 52, 38, 0x687980, 0xc4cdc6, 0x333f49, 8);
-    g.fillStyle(0x9eacae).fillRoundedRect(-32, -105, 53, 34, 9);
-    for (let x = -23; x < 19; x += 13) {
-      g.fillStyle(0x46565d).fillRoundedRect(x, -99, 7, 22, 3);
-      g.lineStyle(1, 0xd1d4be).lineBetween(x, -99, x, -78);
-    }
-    poly(g, 0x3b484f, [-19, -106, -13, -158, 4, -158, 19, -103]);
-    poly(g, 0x8e9d9d, [-19, -106, -13, -158, -6, -159, 0, -104]);
-    poly(g, 0xcbd4c7, [-13, -158, -6, -163, 10, -158, 4, -153]);
-    g.fillStyle(0x19272e).fillEllipse(-2, -157, 16, 8);
-    g.lineStyle(2, 0xe1d9b8).strokeEllipse(-2, -157, 17, 8);
-    g.fillStyle(0x222f36).fillRect(-4, -169, 4, 10); // front sight
-    poly(g, 0xa3adab, [13, -110, 24, -122, 29, -117, 23, -104]); // hammer
-    g.fillStyle(0xd4c28e).fillCircle(12, -70, 3);
-    // Fingers wrap around the near side of the grip.
-    for (let i = 0; i < 3; i++) {
-      g.fillStyle(i % 2 ? 0xb47d56 : 0xdca67a).fillRoundedRect(
-        -21,
-        -31 + i * 11,
-        32,
-        10,
-        4,
-      );
-      g.lineStyle(1, 0x815b44).lineBetween(-15, -23 + i * 11, 7, -23 + i * 11);
-    }
-    this.flash = scene.add.graphics().setVisible(false);
-    poly(
-      this.flash,
-      0xff6b21,
-      [
-        -2, -161, -23, -179, -11, -179, -7, -207, 2, -185, 17, -200, 10, -177,
-        27, -176, 7, -164,
-      ],
-    );
-    poly(
-      this.flash,
-      0xffd354,
-      [-2, -163, -13, -180, -5, -178, -5, -195, 3, -178, 13, -187, 7, -171],
-    );
-    poly(this.flash, 0xfff4bf, [-4, -165, -7, -180, 1, -175, 5, -182, 5, -167]);
-    this.view = scene.add.container(610, 530, [g, this.flash]).setDepth(100);
+    createWeaponEffects(scene);
+    this.model = scene.add
+      .image(25, -2, "revolver-hand")
+      .setOrigin(0.5, 0.78)
+      .setDisplaySize((250 * 2) / 3, 250);
+    this.flash = scene.add
+      .image(this.muzzleLocal.x, this.muzzleLocal.y, "weapon-flare")
+      .setOrigin(0.5, 0.825)
+      .setRotation(-0.68)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setVisible(false);
+    this.view = scene.add.container(610, 530, [this.model, this.flash]).setDepth(100);
     this.effects = scene.add.container(0, 0).setDepth(110);
     this.smoke = scene.add.graphics().setDepth(105);
     this.crosshair = scene.add.graphics().setDepth(120);
@@ -274,6 +245,7 @@ export class ViewWeapon {
   }
   reset() {
     this.recoil = 0;
+    this.age = 0;
     this.flashRemaining = 0;
     this.smokeAge = 1000;
     this.flash.setVisible(false);
@@ -284,18 +256,21 @@ export class ViewWeapon {
     this.update(0, false);
   }
   muzzle() {
-    return this.view.getWorldTransformMatrix().transformPoint(-2, -160);
+    return this.view
+      .getWorldTransformMatrix()
+      .transformPoint(this.muzzleLocal.x, this.muzzleLocal.y);
   }
   fire() {
     this.recoil = 1;
     this.flashRemaining = 95;
     this.smokeAge = 0;
-    this.flash.setVisible(true);
-    const p = this.view.getWorldTransformMatrix().transformPoint(24, -87);
-    const g = this.scene.add.graphics();
-    box(g, -6, -3, 13, 6, 0xc29440, 0xffdd84, 0x74542c, 2);
-    g.fillStyle(0xf7d06b).fillEllipse(-6, 0, 4, 8);
-    const view = this.scene.add.container(p.x, p.y, [g]);
+    this.flash.setVisible(true).setScale(0.85).setAlpha(1);
+    this.model.setTint(0xffebcf);
+    const p = this.view
+      .getWorldTransformMatrix()
+      .transformPoint(this.cylinderLocal.x, this.cylinderLocal.y);
+    const casing = this.scene.add.image(0, 0, "weapon-brass").setDisplaySize(17, 6);
+    const view = this.scene.add.container(p.x, p.y, [casing]);
     this.effects.add(view);
     this.shells.push({
       view,
@@ -307,17 +282,30 @@ export class ViewWeapon {
   }
   update(delta: number, reloading: boolean) {
     const dt = Math.min(delta, 80) / 1000;
+    this.age += dt;
     this.recoil = Math.max(0, this.recoil - dt * 4.8);
     this.flashRemaining = Math.max(0, this.flashRemaining - delta);
-    this.flash.setVisible(this.flashRemaining > 0);
+    this.flash
+      .setVisible(this.flashRemaining > 0)
+      .setScale(0.6 + (0.25 * this.flashRemaining) / 95)
+      .setAlpha(this.flashRemaining / 95);
+    this.model.setTint(this.flashRemaining > 55 ? 0xffebcf : 0xffffff);
     this.smokeAge += delta;
-    const targetX = 610 + (this.aimX - 480) * 0.075;
-    const targetY = 530 + (this.aimY - 270) * 0.018 + (reloading ? 95 : 0);
+    const targetX =
+      610 + (this.aimX - 480) * 0.075 + Math.sin(this.age * 1.7) * 0.8;
+    const targetY =
+      530 +
+      (this.aimY - 270) * 0.018 +
+      Math.sin(this.age * 1.4) * 1.1 +
+      (reloading ? 95 : 0);
     const smooth = delta === 0 ? 1 : 1 - Math.exp(-dt * 14);
     this.view.x = Phaser.Math.Linear(this.view.x, targetX, smooth);
     this.view.y = Phaser.Math.Linear(this.view.y, targetY, smooth);
     this.view.rotation =
-      (this.aimX - 480) * 0.00016 - this.recoil * 0.13 + (reloading ? 0.28 : 0);
+      (this.aimX - 480) * 0.00016 -
+      this.recoil * 0.13 +
+      Math.sin(this.age * 1.4) * 0.002 +
+      (reloading ? 0.28 : 0);
     this.view.setScale(0.9 + this.recoil * 0.03);
     this.crosshair
       .setPosition(this.aimX, this.aimY)

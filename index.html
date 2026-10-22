@@ -9,7 +9,17 @@
     <meta name="theme-color" content="#211d20" />
     <title>Последний патрон</title>
   </head>
-  <body>
+  <body class="in-menu">
+    <div id="menu-backdrop" aria-hidden="true">
+      <div class="sun-haze"></div>
+      <i class="lantern-glow lantern-left"></i>
+      <i class="lantern-glow lantern-right"></i>
+      <div class="dust-field">
+        <i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <i class="tumbleweed"></i>
+    </div>
     <div id="app">
       <header>
         <span>★ LAST SHOT</span
@@ -18,12 +28,15 @@
         </button>
       </header>
       <main>
-        <p class="eyebrow">ГЛАВА I · ПЫЛЬНЫЙ ГОРОД</p>
-        <h1>Последний патрон</h1>
-        <p class="intro">
-          Шесть патронов. Три жизни. Один город, которому нужен шериф.
-        </p>
-        <section id="menu">
+        <div class="hero">
+          <p class="eyebrow">ГЛАВА I · ПЫЛЬНЫЙ ГОРОД</p>
+          <h1>Последний патрон</h1>
+          <p class="intro">
+            Шесть патронов. Три жизни. Один город, которому нужен шериф.
+          </p>
+        </div>
+        <section id="menu" aria-label="Выбор уровня">
+          <p class="menu-caption">ПЯТЬ ИСТОРИЙ · ОДИН ШЕРИФ</p>
           <div id="levels"></div>
           <p class="instructions">
             Стреляй по бандитам в красных платках. Береги жителей в зелёном.<br />Клик

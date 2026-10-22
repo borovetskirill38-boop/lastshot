@@ -321,12 +321,32 @@ function menu() {
   el("play").hidden = true;
   el("result").hidden = true;
   el("menu").hidden = false;
+  document.body.classList.add("in-menu");
+  window.scrollTo(0, 0);
+  document.querySelector(".saloon-transition")?.remove();
   el("levels").replaceChildren();
   levels.forEach((l, i) => {
     const b = document.createElement("button");
     b.className = "level";
     b.disabled = !townReady || i >= progress.unlocked;
-    b.innerHTML = `<b>${i === 4 ? "★" : String(i + 1).padStart(2, "0")}</b><span>${l.name}</span><small>${i >= progress.unlocked ? "ЗАКРЫТО" : progress.best[i] ? `РЕКОРД: ${progress.best[i]}` : i === 0 ? "БЕСКОНЕЧНЫЙ РЕЖИМ" : i === 4 ? "БОСС · 6 HP" : `${l.goal} БАНДИТОВ`}</small>`;
+    b.classList.toggle("locked", i >= progress.unlocked);
+    const status =
+      i >= progress.unlocked
+      ? "ЗАКРЫТО"
+      : progress.best[i]
+        ? `РЕКОРД: ${progress.best[i]}`
+        : i === 0
+          ? "БЕСКОНЕЧНЫЙ РЕЖИМ"
+          : i === 4
+            ? "БОСС · 6 HP"
+            : `${l.goal} БАНДИТОВ`;
+    b.innerHTML = `
+      <b>${i === 4 ? "★" : String(i + 1).padStart(2, "0")}</b>
+      <i class="saloon-doors" aria-hidden="true">
+        <i class="door-leaf door-left"></i><i class="door-leaf door-right"></i>
+        <i class="door-lock"></i>
+      </i>
+      <span>${l.name}</span><small>${status}</small>`;
     b.addEventListener("pointerenter", (event) => {
       if (!b.disabled && event.pointerType !== "touch") gameAudio.play("hover");
     });
@@ -336,6 +356,18 @@ function menu() {
 }
 function start(i: number) {
   if (!townReady) return;
+  document.body.classList.remove("in-menu");
+  // The overlay opens over the live scene without delaying input or sound.
+  document.querySelector(".saloon-transition")?.remove();
+  const entrance = document.createElement("div");
+  entrance.className = "saloon-transition";
+  entrance.setAttribute("aria-hidden", "true");
+  entrance.innerHTML =
+    '<i class="entrance-leaf entrance-left"></i><i class="entrance-leaf entrance-right"></i>';
+  entrance.addEventListener("animationend", (event) => {
+    if (event.target === entrance) entrance.remove();
+  });
+  document.body.append(entrance);
   selected = i;
   el("menu").hidden = true;
   el("result").hidden = true;
@@ -344,6 +376,7 @@ function start(i: number) {
   scene.scale.setParentSize(el("game").clientWidth, el("game").clientHeight);
   scene.scale.refresh();
   scene.begin();
+  window.scrollTo(0, 0);
   gameAudio.play("door");
 }
 el("reload").onclick = () => scene.reload();
@@ -365,6 +398,7 @@ el("sound").onclick = () => {
   });
 };
 document.addEventListener("visibilitychange", () => {
+  document.body.classList.toggle("page-hidden", document.hidden);
   gameAudio.setHidden(document.hidden);
   if (document.hidden && !scene.ended && !scene.paused) scene.togglePause();
 });

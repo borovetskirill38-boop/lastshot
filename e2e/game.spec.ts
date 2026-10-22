@@ -169,10 +169,13 @@ test("view model tracks aim, fires at the muzzle, ejects brass and freezes on pa
   // Inspect the first animation frame deterministically, before a frame can expire.
   const fired = await scene<any>(
     page,
-    `s=>{s.shoot(815,216);s.togglePause();return {ammo:s.ammo,flash:s.weapon.flash.visible,shells:s.weapon.shells.length,muzzle:s.weapon.muzzle(),view:s.weapon.view.x};}`,
+    `s=>{s.shoot(815,216);s.togglePause();return {ammo:s.ammo,flash:s.weapon.flash.visible,shells:s.weapon.shells.length,muzzle:s.weapon.muzzle(),flare:s.weapon.flash.getWorldTransformMatrix().transformPoint(0,0),flashAlpha:s.weapon.flash.alpha,texture:s.weapon.model.texture.key,view:s.weapon.view.x};}`,
   );
   expect(fired.ammo).toBe(5);
   expect(fired.flash).toBe(true);
+  expect(fired.flashAlpha).toBeGreaterThan(0.5);
+  expect(fired.texture).toBe("revolver-hand");
+  expect(Math.hypot(fired.flare.x - fired.muzzle.x, fired.flare.y - fired.muzzle.y)).toBeLessThan(0.001);
   expect(fired.shells).toBe(1);
   expect(fired.muzzle.y).toBeGreaterThan(340);
   expect(fired.muzzle.y).toBeLessThan(500);
