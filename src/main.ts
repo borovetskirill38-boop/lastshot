@@ -321,6 +321,9 @@ function menu() {
     b.className = "level";
     b.disabled = i >= progress.unlocked;
     b.innerHTML = `<b>${i === 4 ? "★" : String(i + 1).padStart(2, "0")}</b><span>${l.name}</span><small>${i >= progress.unlocked ? "ЗАКРЫТО" : progress.best[i] ? `РЕКОРД: ${progress.best[i]}` : i === 0 ? "БЕСКОНЕЧНЫЙ РЕЖИМ" : i === 4 ? "БОСС · 6 HP" : `${l.goal} БАНДИТОВ`}</small>`;
+    b.addEventListener("pointerenter", (event) => {
+      if (!b.disabled && event.pointerType !== "touch") gameAudio.play("hover");
+    });
     b.onclick = () => start(i);
     el("levels").append(b);
   });
@@ -334,6 +337,7 @@ function start(i: number) {
   scene.scale.setParentSize(el("game").clientWidth, el("game").clientHeight);
   scene.scale.refresh();
   scene.begin();
+  gameAudio.play("door");
 }
 el("reload").onclick = () => scene.reload();
 el("pause").onclick = () => scene.togglePause();

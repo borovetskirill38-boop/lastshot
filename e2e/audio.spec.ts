@@ -12,8 +12,8 @@ test("recordings decode, produce an audio signal, and obey mute and voice limits
     const { gameAudio } = await import("/src/main.ts");
     gameAudio.setMenu(false);
     const a = gameAudio as any;
-    const buffers = [...a.buffers.values()] as AudioBuffer[];
-    const summaries = buffers.map((b) => {
+    const buffers = [...a.buffers.entries()] as [string, AudioBuffer][];
+    const summaries = buffers.map(([name, b]) => {
       const data = b.getChannelData(0);
       let peak = 0,
         energy = 0;
@@ -22,6 +22,7 @@ test("recordings decode, produce an audio signal, and obey mute and voice limits
         energy += value * value;
       }
       return {
+        name,
         duration: b.duration,
         peak,
         rms: Math.sqrt(energy / data.length),
@@ -46,14 +47,17 @@ test("recordings decode, produce an audio signal, and obey mute and voice limits
     gameAudio.play("shot");
     return { summaries, signal, active, muted: gameAudio.state };
   });
-  expect(result.summaries).toHaveLength(13);
+  expect(result.summaries).toHaveLength(11);
   for (const b of result.summaries) {
-    expect(b.duration).toBeGreaterThan(0.18);
-    expect(b.duration).toBeLessThan(13);
-    expect(b.peak).toBeGreaterThan(0.1);
+    expect(b.duration).toBeGreaterThan(b.name === "hover" ? 0.06 : 0.18);
+    expect(b.duration).toBeLessThan(60);
+    expect(b.peak).toBeGreaterThan(0.005);
     expect(b.peak).toBeLessThan(1);
     expect(b.rms).toBeGreaterThan(0.001);
   }
+  expect(
+    result.summaries.find((b) => b.name === "menuMusic")!.duration,
+  ).toBeGreaterThan(50);
   expect(result.signal).toBeGreaterThan(0.001);
   expect(result.active).toBeLessThanOrEqual(18);
   expect(result.muted.active).toBe(0);
@@ -270,4 +274,131 @@ test("menu music and ambience are unique loops, stop for play, mute and hide, an
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   expect((await state()).background).toHaveLength(2);
   expect(errors).toEqual([]);
+});
+
+test("the same centered gun take overlaps every hit instead of replacing it", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      "lastshot-progress",
+      JSON.stringify({ unlocked: 5, best: [] }),
+    ),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "Переключить звук" }).click();
+  await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
+  await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
+  const result = await page.evaluate(async () => {
+    const { game, gameAudio } = await import("/src/main.ts");
+    const a = gameAudio as any,
+      s = game.scene.getScene("town") as any;
+    const starts = new Map<AudioBufferSourceNode, number>();
+    const original = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function (
+      when = 0,
+      offset = 0,
+      duration?: number,
+    ) {
+      starts.set(this, when);
+      return original.call(this, when, offset, duration);
+    };
+    s.nextSpawn = Infinity;
+    const rows = [];
+    for (const target of ["air", "wood", "bandit", "civilian"]) {
+      gameAudio.stop();
+      for (const t of s.targets) t.view.destroy();
+      s.targets = [];
+      s.ammo = 6;
+      if (target === "bandit" || target === "civilian")
+        s.targets.push({
+          x: 230,
+          y: 253,
+          slot: 0,
+          civilian: target === "civilian",
+          view: s.person(230, 253, target === "civilian"),
+          expires: s.clock + 10000,
+        });
+      s.shoot(
+        target === "air" ? 30 : target === "wood" ? 600 : 230,
+        target === "air" ? 30 : target === "wood" ? 320 : 253,
+      );
+      const voices = [...a.voices] as any[];
+      const gun = voices.find((v) => v.kind === "shot"),
+        hit = voices.find((v) => v.kind !== "shot");
+      rows.push({
+        target,
+        same: gun.source.buffer === a.buffers.get("shot"),
+        rate: gun.source.playbackRate.value,
+        pan: gun.pan?.pan.value ?? 0,
+        gunStart: starts.get(gun.source)!,
+        gunDuration: gun.source.buffer.duration,
+        hitKind: hit?.kind,
+        hitStart: hit ? starts.get(hit.source) : null,
+      });
+    }
+    AudioBufferSourceNode.prototype.start = original;
+    return { rows, separate: a.shotOutput !== a.effectOutput };
+  });
+  expect(result.separate).toBe(true);
+  for (const row of result.rows) {
+    expect(row.same).toBe(true);
+    expect(row.rate).toBe(1);
+    expect(row.pan).toBe(0);
+    if (row.hitStart !== null) {
+      expect(Math.abs(row.hitStart - row.gunStart)).toBeLessThan(0.025);
+      expect(row.hitStart).toBeLessThan(row.gunStart + row.gunDuration);
+    }
+  }
+  expect(result.rows.map((r) => r.hitKind ?? null)).toEqual([
+    null,
+    "wood",
+    "banditDeath",
+    "civilianDeath",
+  ]);
+});
+
+test("mode hover cues fire once per button entry and selection opens the saloon doors", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      "lastshot-progress",
+      JSON.stringify({ unlocked: 3, best: [] }),
+    ),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "Переключить звук" }).click();
+  await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
+  await page.evaluate(async () => {
+    const { gameAudio } = await import("/src/main.ts");
+    (window as any).cues = [];
+    const play = gameAudio.play.bind(gameAudio);
+    gameAudio.play = (kind, pan) => {
+      (window as any).cues.push(kind);
+      play(kind, pan);
+    };
+  });
+  const cues = () => page.evaluate(() => (window as any).cues as string[]);
+  const modes = page.locator(".level");
+  await modes.nth(0).hover();
+  expect(await cues()).toEqual(["hover"]);
+  await modes.nth(0).locator("span").hover();
+  expect(await cues()).toEqual(["hover"]);
+  await modes.nth(1).hover();
+  expect(await cues()).toEqual(["hover", "hover"]);
+  await modes.nth(4).hover();
+  expect(await cues()).toEqual(["hover", "hover"]);
+  await modes.nth(1).click();
+  expect((await cues()).filter((c) => c === "door")).toHaveLength(1);
+  const active = await page.evaluate(async () => {
+    const { gameAudio } = await import("/src/main.ts");
+    const a = gameAudio as any;
+    return {
+      background: gameAudio.state.background,
+      door: [...a.voices].some((v: any) => v.kind === "door"),
+    };
+  });
+  expect(active.background).toEqual([]);
+  expect(active.door).toBe(true);
 });

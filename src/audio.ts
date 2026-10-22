@@ -1,42 +1,47 @@
-import shot1 from "./audio/shot-1.mp3?inline";
-import shot2 from "./audio/shot-2.mp3?inline";
+import shot from "./audio/shot.mp3?inline";
 import reload from "./audio/reload.mp3?inline";
 import wood1 from "./audio/wood-1.mp3?inline";
 import wood2 from "./audio/wood-2.mp3?inline";
-import banditDeath1 from "./audio/bandit-death-1.mp3?inline";
-import banditDeath2 from "./audio/bandit-death-2.mp3?inline";
+import banditDeath from "./audio/bandit-death.mp3?inline";
 import civilianDeath from "./audio/civilian-death.mp3?inline";
 import menuMusic from "./audio/menu-music.mp3?inline";
 import menuAmbience from "./audio/menu-ambience.mp3?inline";
-import pain1 from "./audio/pain-1.mp3?inline";
-import pain2 from "./audio/pain-2.mp3?inline";
-import pain3 from "./audio/pain-3.mp3?inline";
+import pain from "./audio/pain.mp3?inline";
+import door from "./audio/saloon-door.mp3?inline";
+import hover from "./audio/menu-hover.mp3?inline";
 
 const clips = {
-  shot1,
-  shot2,
+  shot,
   reload,
   wood1,
   wood2,
-  banditDeath1,
-  banditDeath2,
+  banditDeath,
   civilianDeath,
-  pain1,
-  pain2,
-  pain3,
   menuMusic,
   menuAmbience,
+  pain,
+  door,
+  hover,
 };
 type Clip = keyof typeof clips;
 export type SoundEffect =
-  "shot" | "reload" | "wood" | "banditDeath" | "civilianDeath" | "pain";
+  | "shot"
+  | "reload"
+  | "wood"
+  | "banditDeath"
+  | "civilianDeath"
+  | "pain"
+  | "door"
+  | "hover";
 const variants: Record<SoundEffect, Clip[]> = {
-  shot: ["shot1", "shot2"],
+  shot: ["shot"],
   reload: ["reload"],
   wood: ["wood1", "wood2"],
-  banditDeath: ["banditDeath1", "banditDeath2"],
+  banditDeath: ["banditDeath"],
   civilianDeath: ["civilianDeath"],
-  pain: ["pain1", "pain2", "pain3"],
+  pain: ["pain"],
+  door: ["door"],
+  hover: ["hover"],
 };
 const volumes: Record<SoundEffect, number> = {
   shot: 0.48,
@@ -45,6 +50,8 @@ const volumes: Record<SoundEffect, number> = {
   banditDeath: 0.68,
   civilianDeath: 0.7,
   pain: 0.55,
+  door: 0.48,
+  hover: 0.15,
 };
 type Voice = {
   kind: SoundEffect;
@@ -61,6 +68,8 @@ export class GameAudio {
   ready: Promise<void> = Promise.resolve();
   private context?: AudioContext;
   private master?: GainNode;
+  private shotOutput?: DynamicsCompressorNode;
+  private effectOutput?: DynamicsCompressorNode;
   private buffers = new Map<Clip, AudioBuffer>();
   private voices = new Set<Voice>();
   private inMenu = true;
@@ -96,16 +105,22 @@ export class GameAudio {
         // Create/resume synchronously inside the sound-button gesture (mobile autoplay rules).
         const context = new AudioContext();
         this.context = context;
-        const master = context.createGain(),
-          limiter = context.createDynamicsCompressor();
-        limiter.threshold.value = -10;
-        limiter.knee.value = 8;
-        limiter.ratio.value = 12;
-        limiter.attack.value = 0.003;
-        limiter.release.value = 0.12;
-        master.connect(limiter);
-        limiter.connect(context.destination);
+        const master = context.createGain();
+        // Independent buses: an impact must never duck or recolor the gun recording.
+        const shotOutput = context.createDynamicsCompressor(),
+          effectOutput = context.createDynamicsCompressor();
+        for (const limiter of [shotOutput, effectOutput]) {
+          limiter.threshold.value = -10;
+          limiter.knee.value = 8;
+          limiter.ratio.value = 12;
+          limiter.attack.value = 0.003;
+          limiter.release.value = 0.12;
+          limiter.connect(master);
+        }
+        master.connect(context.destination);
         this.master = master;
+        this.shotOutput = shotOutput;
+        this.effectOutput = effectOutput;
         this.setGain();
         this.ready = Promise.all(
           Object.entries(clips).map(async ([name, url]) => {
@@ -255,18 +270,11 @@ export class GameAudio {
     const source = context.createBufferSource(),
       gain = context.createGain();
     source.buffer = buffer;
+    // Keep human recordings at their natural pitch; the gun is one immutable take.
     source.playbackRate.value =
-      kind === "reload" || kind === "shot"
-        ? 1
-        : kind === "civilianDeath"
-          ? 1.06
-          : kind === "banditDeath"
-            ? 0.96
-            : 0.98 + Math.random() * 0.04;
-    const vocal =
-      kind === "pain" || kind === "banditDeath" || kind === "civilianDeath";
-    const start =
-      context.currentTime + (vocal ? 0.065 : kind === "wood" ? 0.018 : 0);
+      kind === "wood" ? 0.98 + Math.random() * 0.04 : 1;
+    const start = context.currentTime;
+    const output = kind === "shot" ? this.shotOutput! : this.effectOutput!;
     gain.gain.setValueAtTime(0, start);
     gain.gain.linearRampToValueAtTime(volumes[kind], start + 0.002);
     const pan =
@@ -275,10 +283,13 @@ export class GameAudio {
         : undefined;
     source.connect(gain);
     if (pan) {
-      pan.pan.value = Math.max(-0.55, Math.min(0.55, position * 0.55));
+      pan.pan.value = Math.max(
+        -0.55,
+        Math.min(0.55, (kind === "shot" ? 0 : position) * 0.55),
+      );
       gain.connect(pan);
-      pan.connect(master);
-    } else gain.connect(master);
+      pan.connect(output);
+    } else gain.connect(output);
     const voice: Voice = { kind, source, gain, pan };
     this.voices.add(voice);
     source.onended = () => this.dispose(voice);
