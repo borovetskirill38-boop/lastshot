@@ -333,3 +333,20 @@ footer span {
     font-size: 15px;
   }
 }
+
+.audio-credits {
+  margin-top: 16px;
+  color: #b7a087;
+  font:
+    12px/1.6 Georgia,
+    serif;
+}
+.audio-credits summary {
+  cursor: pointer;
+}
+.audio-credits a {
+  color: #e2b977;
+}
+.audio-credits p {
+  max-width: 800px;
+}

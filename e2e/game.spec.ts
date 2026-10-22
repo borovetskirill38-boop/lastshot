@@ -130,6 +130,8 @@ test("mobile touch shoots and reloads", async ({ browser }) => {
   });
   const page = await context.newPage();
   await page.goto("/");
+  await page.getByRole("button", { name: "Переключить звук" }).tap();
+  await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   await expect(page.locator("canvas")).toBeAttached();
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).tap();
   const box = await page.locator("canvas").boundingBox();

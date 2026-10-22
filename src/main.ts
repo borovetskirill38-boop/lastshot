@@ -1,5 +1,7 @@
 import Phaser from "phaser";
 import "./style.css";
+import { GameAudio } from "./audio";
+import { hitsWood } from "./surfaces.js";
 import { drawTown, createPerson, ViewWeapon } from "./art";
 import { levels, readProgress, recordWin } from "./rules.js";
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
@@ -16,29 +18,8 @@ try {
   } as unknown as Storage;
 }
 let progress = readProgress(storage),
-  selected = 0,
-  sound = false;
-let audio: AudioContext | undefined;
-function bang() {
-  if (!sound) return;
-  try {
-    audio ??= new AudioContext();
-    void audio.resume();
-    const o = audio.createOscillator(),
-      g = audio.createGain();
-    o.type = "sawtooth";
-    o.frequency.setValueAtTime(140, audio.currentTime);
-    o.frequency.exponentialRampToValueAtTime(35, audio.currentTime + 0.09);
-    g.gain.setValueAtTime(0.08, audio.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.12);
-    o.connect(g);
-    g.connect(audio.destination);
-    o.start();
-    o.stop(audio.currentTime + 0.13);
-  } catch {
-    /* Audio is optional. */
-  }
-}
+  selected = 0;
+export const gameAudio = new GameAudio();
 type Target = {
   x: number;
   y: number;
@@ -98,6 +79,8 @@ class Town extends Phaser.Scene {
     return createPerson(this, x, y, civilian, boss);
   }
   begin() {
+    gameAudio.stop();
+    gameAudio.setPaused(false);
     for (const t of this.targets) t.view.destroy();
     this.targets = [];
     this.bossView?.destroy();
@@ -147,11 +130,13 @@ class Town extends Phaser.Scene {
     if (this.ended || this.paused || this.reloading || this.ammo === 6) return;
     this.reloading = true;
     this.reloadEnd = this.clock + 1100;
+    gameAudio.play("reload");
     el("reload").textContent = "Перезарядка…";
   }
   togglePause() {
     if (this.ended) return;
     this.paused = !this.paused;
+    gameAudio.setPaused(this.paused);
     el("pause").textContent = this.paused ? "Продолжить" : "Пауза";
   }
   shoot(x: number, y: number) {
@@ -159,7 +144,9 @@ class Town extends Phaser.Scene {
     this.ammo--;
     this.weapon.aim(x, y);
     this.weapon.fire();
-    bang();
+    gameAudio.play("shot");
+    let hitPerson = false;
+    const pan = (x - 480) / 480;
     const flash = this.add.circle(x, y, 13, 0xffe9a9, 0.8);
     this.tweens.add({
       targets: flash,
@@ -170,6 +157,9 @@ class Town extends Phaser.Scene {
     });
     if (selected === 4) {
       if (this.bossOpen && Math.abs(x - 480) < 42 && y > 255 && y < 359) {
+        hitPerson = true;
+        gameAudio.play("body", pan);
+        gameAudio.play("pain", pan);
         this.bossHP--;
         this.bossHit = true;
         this.kills++;
@@ -182,6 +172,9 @@ class Town extends Phaser.Scene {
         (t) => Math.abs(t.x - x) <= 40 && y >= t.y - 56 && y <= t.y + 43,
       );
       if (t) {
+        hitPerson = true;
+        gameAudio.play("body", pan);
+        if (!t.civilian) gameAudio.play("pain", pan);
         t.view.destroy();
         this.targets = this.targets.filter((v) => v !== t);
         if (t.civilian) this.lives--;
@@ -197,11 +190,13 @@ class Town extends Phaser.Scene {
         if (this.lives <= 0) this.finish(false);
       }
     }
+    if (!hitPerson && hitsWood(x, y, this.slots)) gameAudio.play("wood", pan);
     this.hud();
   }
   finish(win: boolean) {
     if (this.ended) return;
     this.ended = true;
+    gameAudio.stop("reload");
     let saved = true;
     const endlessRun = selected === 0;
     if (win || endlessRun) {
@@ -237,6 +232,7 @@ class Town extends Phaser.Scene {
     const time = (this.clock += delta);
     if (this.reloading && time >= this.reloadEnd) {
       this.reloading = false;
+      gameAudio.stop("reload");
       this.ammo = 6;
       el("reload").textContent = "Перезарядить · R";
       this.hud();
@@ -313,6 +309,8 @@ export const game = new Phaser.Game({
   audio: { noAudio: true },
 });
 function menu() {
+  gameAudio.stop();
+  gameAudio.setPaused(false);
   scene.ended = true;
   el("play").hidden = true;
   el("result").hidden = true;
@@ -344,8 +342,16 @@ el("choose").onclick = menu;
 el("retry").onclick = () => start(selected);
 el("next").onclick = () => start(selected + 1);
 el("sound").onclick = () => {
-  sound = !sound;
-  el("sound").textContent = `Звук: ${sound ? "вкл." : "выкл."}`;
+  const loading = gameAudio.setEnabled(!gameAudio.enabled);
+  el("sound").textContent = gameAudio.enabled
+    ? "Звук: загрузка…"
+    : "Звук: выкл.";
+  void loading.then(() => {
+    el("sound").textContent = gameAudio.failed
+      ? "Звук недоступен"
+      : `Звук: ${gameAudio.enabled ? "вкл." : "выкл."}`;
+    el("sound").setAttribute("aria-pressed", String(gameAudio.enabled));
+  });
 };
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && !scene.ended && !scene.paused) scene.togglePause();

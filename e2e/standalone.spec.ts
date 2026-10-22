@@ -13,8 +13,20 @@ test("single HTML runs offline with weapon and no external dependencies", async 
     requests: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("request", (r) => requests.push(r.url()));
+  await page.evaluate(() => {
+    (window as any).audioStarts = 0;
+    const original = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function (
+      ...args: Parameters<AudioBufferSourceNode["start"]>
+    ) {
+      (window as any).audioStarts++;
+      return original.apply(this, args);
+    };
+  });
   await page.setContent(await readFile("lastshot.html", "utf8"));
   await expect(page.locator("canvas")).toBeAttached();
+  await page.getByRole("button", { name: "Переключить звук" }).click();
+  await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
   await page.locator("canvas").scrollIntoViewIfNeeded();
   const box = await page.locator("canvas").boundingBox();
@@ -29,6 +41,9 @@ test("single HTML runs offline with weapon and no external dependencies", async 
     path: "test-results/standalone-art.png",
     fullPage: true,
   });
+  expect(
+    await page.evaluate(() => (window as any).audioStarts),
+  ).toBeGreaterThanOrEqual(2);
   expect(errors).toEqual([]);
   expect(requests).toEqual([]);
   await context.close();

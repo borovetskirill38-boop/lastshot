@@ -13,7 +13,9 @@
     <div id="app">
       <header>
         <span>★ LAST SHOT</span
-        ><button id="sound" aria-label="Переключить звук">Звук: выкл.</button>
+        ><button id="sound" aria-label="Переключить звук" aria-pressed="false">
+          Звук: выкл.
+        </button>
       </header>
       <main>
         <p class="eyebrow">ГЛАВА I · ПЫЛЬНЫЙ ГОРОД</p>
@@ -73,6 +75,23 @@
       <footer>
         НЕЗАВИСИМЫЙ ПРОТОТИП · 0.1 <span>Дикий Запад ждёт твоего выстрела</span>
       </footer>
+      <details class="audio-credits">
+        <summary>Звуки и лицензия</summary>
+        <p>
+          Аудиозаписи: © 2009–2025 Red Eclipse Team (xJoJox, quin, Q009,
+          garsipal).
+          <a
+            href="https://github.com/redeclipse/sounds/tree/ec74d59ea3b88f078122d2777103b3f06275b943"
+            >Исходные записи</a
+          >
+          ·
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/"
+            >CC BY-SA 4.0</a
+          >. Адаптация для игры: обрезка, фильтрация, нормализация, изменение
+          темпа перезарядки и перекодирование в MP3. Адаптированные аудиозаписи
+          распространяются по той же лицензии.
+        </p>
+      </details>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
