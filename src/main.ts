@@ -4,7 +4,7 @@ import { GameAudio } from "./audio";
 import { Armory } from "./armory";
 import { observeGameLayout } from "./layout";
 import { hitsWood } from "./surfaces.js";
-import { preloadArt, drawTown, drawStreet, createPerson, ViewWeapon } from "./art";
+import { preloadArt, drawTown, drawStreet, drawTavern, createPerson, ViewWeapon } from "./art";
 import { maps, readMap, hitsTarget } from "./maps.js";
 import { levels, readProgress, recordWin } from "./rules.js";
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
@@ -86,13 +86,15 @@ class Town extends Phaser.Scene {
   }
   drawTown() {
     for (const layer of this.scenery) layer.destroy();
-    this.scenery = this.map.id === "street"
-      ? drawStreet(this, [...this.slots, this.map.boss])
-      : drawTown(this, this.slots);
+    this.scenery = this.map.id === "saloon"
+      ? drawTown(this, this.slots)
+      : this.map.id === "street"
+        ? drawStreet(this, [...this.slots, this.map.boss])
+        : drawTavern(this);
   }
   person(x: number, y: number, civilian: boolean, boss = false) {
     const position = boss ? this.map.boss : this.slots.find((slot) => slot.x === x && slot.y === y);
-    return createPerson(this, x, y, civilian, boss, position?.scale ?? 1, this.map.id === "street");
+    return createPerson(this, x, y, civilian, boss, position?.scale ?? 1, this.map.tint);
   }
   begin() {
     gameAudio.setMenu(false);
@@ -316,14 +318,14 @@ class Town extends Phaser.Scene {
           s = this.slots[slot],
           civilian = Math.random() < levels[selected].civilians;
         const view = this.person(s.x, s.y, civilian);
-        if (this.map.id === "street") view.setY(s.y + 24).setAlpha(0.4);
+        if (this.map.emerge) view.setY(s.y + 24).setAlpha(0.4);
         this.targets.push({
           ...s,
           slot,
           civilian,
           view,
           expires: time + levels[selected].lifetime,
-          appearedAt: this.map.id === "street" ? time : undefined,
+          appearedAt: this.map.emerge ? time : undefined,
         });
       }
       this.nextSpawn = time + levels[selected].interval;

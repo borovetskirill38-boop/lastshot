@@ -1,13 +1,26 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { maps, readMap, hitsTarget } from "../src/maps.js";
+import { maps, readMap, hitsTarget, coverTopAt } from "../src/maps.js";
 
 test("saved location is validated, including unavailable storage", () => {
-  assert.equal(readMap({ getItem: () => "street" }), maps[1]);
+  for (const map of maps) assert.equal(readMap({ getItem: () => map.id }), map);
   for (const value of [null, "", "unknown", "__proto__"]) {
     assert.equal(readMap({ getItem: () => value }), maps[0]);
   }
   assert.equal(readMap({ getItem() { throw Error("denied"); } }), maps[0]);
+});
+
+test("curved table and slanted bar cover protect exactly the drawn upper edge", () => {
+  const tavern = maps.find((map) => map.id === "tavern");
+  const table = tavern.slots[1];
+  assert.ok(coverTopAt(241, table) < coverTopAt(272, table));
+  assert.equal(hitsTarget(241, 238, table), false);
+  assert.equal(hitsTarget(272, 238, table), true);
+  for (const target of [...tavern.slots, tavern.boss]) {
+    const top = coverTopAt(target.x, target);
+    assert.equal(hitsTarget(target.x, top + 2, target), false);
+    assert.equal(hitsTarget(target.x, Math.min(target.y, top - 2), target), true);
+  }
 });
 
 test("all spawn positions have visible hit areas inside the world and distinct target centers", () => {

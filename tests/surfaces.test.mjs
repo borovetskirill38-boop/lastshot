@@ -44,3 +44,13 @@ test("street wood matches cover and facades, with silent open doorways, dirt and
   }
   assert.equal(hitsWood(728, 340, street.slots, "street"), true);
 });
+
+test("tavern furniture and planks sound wooden; glass, rugs and dark passage do not", () => {
+  const tavern = maps.find((map) => map.id === "tavern");
+  for (const [x, y] of [[700, 270], [241, 320], [365, 280], [475, 240], [151, 260], [480, 420], [360, 120]]) {
+    assert.equal(hitsWood(x, y, tavern.slots, "tavern"), true, `${x},${y}`);
+  }
+  for (const [x, y] of [[130, 150], [900, 100], [480, 180], [600, 285], [-1, 200], [NaN, 200]]) {
+    assert.equal(hitsWood(x, y, tavern.slots, "tavern"), false, `${x},${y}`);
+  }
+});

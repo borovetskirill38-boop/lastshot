@@ -4,6 +4,8 @@ import peopleTexture from "./visuals/people.webp?inline";
 import weaponTexture from "./visuals/revolver-hand.webp?inline";
 import arsenalModels from "./visuals/arsenal-models.webp?inline";
 import streetTexture from "./visuals/street-dusk.webp?inline";
+import tavernTexture from "./visuals/tavern.webp?inline";
+import { tavernCovers } from "./maps.js";
 
 type Graphics = Phaser.GameObjects.Graphics;
 const townArtworkKey = "town-artwork";
@@ -22,6 +24,7 @@ const appearances = new WeakMap<
 export function preloadArt(scene: Phaser.Scene) {
   scene.load.image(townArtworkKey, townTexture);
   scene.load.image("street-dusk", streetTexture);
+  scene.load.image("tavern", tavernTexture);
   scene.load.image(peopleKey, peopleTexture);
   scene.load.image("revolver-hand", weaponTexture);
   scene.load.image("arsenal-models", arsenalModels);
@@ -118,6 +121,32 @@ export function drawStreet(
   return layers;
 }
 
+/** Cache shaped foreground furniture once, without an extra mask per character. */
+export function drawTavern(scene: Phaser.Scene) {
+  const key = "tavern-foreground";
+  if (!scene.textures.exists(key)) {
+    const artwork = scene.textures.get("tavern").getSourceImage() as HTMLImageElement;
+    const texture = scene.textures.createCanvas(key, 960, 540)!;
+    const context = texture.context;
+    context.save();
+    context.beginPath();
+    for (const polygon of tavernCovers) {
+      context.moveTo(polygon[0][0], polygon[0][1]);
+      for (const [x, y] of polygon.slice(1)) context.lineTo(x, y);
+      context.closePath();
+    }
+    context.clip();
+    context.drawImage(artwork, 0, 0, 960, 540);
+    context.restore();
+    texture.refresh();
+  }
+  return [
+    scene.add.image(0, 0, "tavern").setOrigin(0).setDisplaySize(960, 540)
+      .setDepth(-1).setName("map-background"),
+    scene.add.image(0, 0, key).setOrigin(0).setDepth(15).setName("map-foreground"),
+  ];
+}
+
 /** All appearances share one atlas; each role cycles without changing gameplay RNG. */
 export function createPerson(
   scene: Phaser.Scene,
@@ -126,7 +155,7 @@ export function createPerson(
   civilian: boolean,
   boss = false,
   scale = 1,
-  dusk = false,
+  tint = 0xffffff,
 ) {
   const texture = scene.textures.get(peopleKey);
   const source = texture.getSourceImage();
@@ -158,7 +187,7 @@ export function createPerson(
     .image(0, 0, peopleKey, variant)
     .setOrigin(0.5, 0.57)
     .setDisplaySize(84, 112);
-  if (dusk) portrait.setTint(0xe4d8d6);
+  portrait.setTint(tint);
   return scene.add
     .container(x, y, [shadow, portrait])
     .setScale(scale)

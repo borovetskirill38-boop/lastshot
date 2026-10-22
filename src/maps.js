@@ -1,9 +1,26 @@
+// Upper edges measured on tavern.webp. The same lines mask sprites and stop shots.
+const tavernBar = [[658, 231], [720, 235], [820, 243], [960, 260]];
+const tavernRoundTable = [[156, 330], [164, 285], [186, 250], [218, 235], [244, 233], [276, 242], [301, 266], [322, 305], [332, 350]];
+const tavernBarrels = [[99, 227], [119, 222], [137, 225], [149, 221], [177, 223], [189, 237]];
+const tavernTippedTable = [[317, 243], [410, 244], [423, 251]];
+const tavernCrates = [[444, 216], [466, 216], [466, 219], [502, 219]];
+
+export const tavernCovers = [
+  [...tavernBar, [960, 540], [913, 540], [757, 428], [672, 327]],
+  [...tavernRoundTable, [328, 391], [311, 423], [284, 443], [247, 449], [210, 440], [178, 416], [157, 372]],
+  [...tavernBarrels, [194, 291], [175, 303], [108, 304], [100, 289]],
+  [...tavernTippedTable, [423, 302], [317, 309]],
+  [...tavernCrates, [502, 264], [444, 264]],
+];
+
 /** World coordinates are shared by artwork, cover, spawning and hit testing. */
 export const maps = [
   {
     id: "saloon",
     name: "Салун",
     time: "Полдень",
+    tint: 0xffffff,
+    emerge: false,
     description: "Знакомый салун: шесть окон, выжженная солнцем древесина и пыльная площадь.",
     slots: [
       { x: 230, y: 253, scale: 1, coverY: 297 },
@@ -19,6 +36,8 @@ export const maps = [
     id: "street",
     name: "Улица городка",
     time: "Лёгкие сумерки",
+    tint: 0xe4d8d6,
+    emerge: true,
     description: "Дома и освещённые веранды по обе стороны улицы. Бандиты прячутся за телегой, ящиками и бочками.",
     slots: [
       { x: 83, y: 242, scale: 1, coverY: 282 },
@@ -30,6 +49,23 @@ export const maps = [
     ],
     boss: { x: 528, y: 249, scale: 1.1, coverY: 282 },
   },
+  {
+    id: "tavern",
+    name: "Внутри салуна",
+    time: "Свет керосиновых ламп",
+    tint: 0xffe4c4,
+    emerge: true,
+    description: "Барная стойка, перевёрнутые столы и бочки у пианино. В подсобке за ящиками тоже может прятаться бандит.",
+    slots: [
+      { x: 151, y: 194, scale: 0.88, coverY: 222, coverProfile: tavernBarrels },
+      { x: 241, y: 205, scale: 1.05, coverY: 234, coverProfile: tavernRoundTable },
+      { x: 365, y: 216, scale: 0.82, coverY: 244, coverProfile: tavernTippedTable },
+      { x: 474, y: 194, scale: 0.68, coverY: 219, coverProfile: tavernCrates },
+      { x: 697, y: 202, scale: 0.9, coverY: 234, coverProfile: tavernBar },
+      { x: 866, y: 218, scale: 1.02, coverY: 249, coverProfile: tavernBar },
+    ],
+    boss: { x: 770, y: 211, scale: 1.05, coverY: 239, coverProfile: tavernBar },
+  },
 ];
 
 export function readMap(storage) {
@@ -40,13 +76,23 @@ export function readMap(storage) {
   }
 }
 
-/** Covered body parts cannot be shot through the wagon, barrels or window sill. */
+/** Follow slanted and curved cover edges; legacy maps retain horizontal sills. */
+export function coverTopAt(x, target) {
+  const profile = target.coverProfile ?? [];
+  for (let i = 1; i < profile.length; i++) {
+    const [left, top] = profile[i - 1], [right, bottom] = profile[i];
+    if (x >= left && x <= right) return top + (bottom - top) * (x - left) / (right - left);
+  }
+  return target.coverY ?? Infinity;
+}
+
+/** Covered body parts cannot be shot through furniture, barrels or window sills. */
 export function hitsTarget(x, y, target) {
   const scale = target.scale ?? 1;
   return Number.isFinite(x) && Number.isFinite(y)
     && Math.abs(x - target.x) <= 40 * scale
     && y >= target.y - 56 * scale
-    && y <= Math.min(target.y + 43 * scale, (target.coverY ?? Infinity) - 1);
+    && y <= Math.min(target.y + 43 * scale, coverTopAt(x, target) - 1);
 }
 
 // Measured on street-dusk.webp, in the fixed 960×540 game world.

@@ -67,3 +67,20 @@ Cached crops of the panorama at depth 15 mask the character waists at depth 10;
 hit testing uses those same cover tops. The upper-body sprites receive a subtle
 twilight tint. Spawn emergence uses game time, so pause freezes it. Changing maps
 destroys the old scenery objects while keeping shared textures loaded once.
+
+## Saloon interior
+
+- `tavern.webp`: original AI-generated 1672×941 panorama, WebP quality 94. A
+  carved bar with mirror, bottles and glasses, a back storeroom, overturned round
+  and rectangular tables, barrels, upright piano, staircase and upper gallery.
+  Warm kerosene lamps mix with cool evening window light; no people are painted
+  into the environment.
+- `map-tavern-preview.webp`: small menu derivative, maximum 320×196, quality 88.
+
+Six target positions and the boss have measured scale, warm tint and cover
+profiles. The upper edges in `src/maps.js` define both the cached 960×540 alpha
+foreground and hit testing: a round table curves, and the bar slopes with
+perspective. The foreground texture is created once on the first interior visit;
+subsequent visits reuse it. Only two scenery images are needed for the room.
+Emergence uses the existing pause-safe gameplay clock. All assets remain embedded
+in the standalone HTML, including the selector preview and menu background.

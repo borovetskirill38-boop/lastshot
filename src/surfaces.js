@@ -22,6 +22,15 @@ export function hitsWood(x, y, slots, mapId = "saloon") {
     return false;
   const inRect = (left, top, right, bottom) =>
     x >= left && x <= right && y >= top && y <= bottom;
+  if (mapId === "tavern") {
+    // Wooden walls, floor and furniture; glass, mirrors, dark passage and rugs differ.
+    return !(inPolygon(x, y, [[107, 52], [151, 77], [151, 222], [107, 221]])
+      || inPolygon(x, y, [[231, 126], [252, 137], [252, 218], [231, 211]])
+      || inPolygon(x, y, [[874, 30], [960, 0], [960, 225], [862, 213], [869, 85]])
+      || inRect(448, 161, 508, 214)
+      || inPolygon(x, y, [[0, 331], [93, 320], [123, 340], [0, 377]])
+      || inPolygon(x, y, [[521, 278], [645, 279], [652, 298], [526, 290]]));
+  }
   if (mapId === "street") {
     if (inRect(62, 174, 101, 282) || inRect(850, 173, 894, 288)) return false;
     return streetWood.some((polygon) => inPolygon(x, y, polygon));
