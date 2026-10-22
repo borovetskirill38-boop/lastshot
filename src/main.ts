@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import "./style.css";
 import { GameAudio } from "./audio";
 import { Armory } from "./armory";
+import { observeGameLayout } from "./layout";
 import { hitsWood } from "./surfaces.js";
 import { preloadArt, drawTown, createPerson, ViewWeapon } from "./art";
 import { levels, readProgress, recordWin } from "./rules.js";
@@ -325,6 +326,13 @@ export const game = new Phaser.Game({
   scene: [scene],
   audio: { noAudio: true },
 });
+const gameLayout = observeGameLayout(el("game-viewport"), el("game"), (width, height) => {
+  if (!townReady) return;
+  scene.scale.setParentSize(width, height);
+  scene.scale.refresh();
+});
+game.events.once("destroy", () => gameLayout.destroy());
+
 function menu() {
   gameAudio.stop();
   gameAudio.setPaused(false);
@@ -335,7 +343,7 @@ function menu() {
   el("menu").hidden = false;
   el("arsenal").hidden = true;
   el<HTMLButtonElement>("arsenal-open").disabled = !townReady;
-  document.body.classList.remove("in-arsenal");
+  document.body.classList.remove("in-arsenal", "in-play");
   document.body.classList.add("in-menu");
   window.scrollTo(0, 0);
   document.querySelector(".saloon-transition")?.remove();
@@ -372,6 +380,7 @@ function menu() {
 function start(i: number) {
   if (!townReady) return;
   document.body.classList.remove("in-menu", "in-arsenal");
+  document.body.classList.add("in-play");
   el("arsenal").hidden = true;
   // The overlay opens over the live scene without delaying input or sound.
   document.querySelector(".saloon-transition")?.remove();
@@ -389,9 +398,8 @@ function start(i: number) {
   el("result").hidden = true;
   el("play").hidden = false;
   el("level-name").textContent = `${i + 1}. ${levels[i].name}`;
-  scene.scale.setParentSize(el("game").clientWidth, el("game").clientHeight);
-  scene.scale.refresh();
   scene.begin();
+  gameLayout.fit();
   window.scrollTo(0, 0);
   gameAudio.play("door");
 }
@@ -401,7 +409,7 @@ el("arsenal-open").onclick = () => {
   el("menu").hidden = true;
   el("play").hidden = true;
   el("arsenal").hidden = false;
-  document.body.classList.remove("in-menu");
+  document.body.classList.remove("in-menu", "in-play");
   document.body.classList.add("in-arsenal");
   armory.open();
   window.scrollTo(0, 0);

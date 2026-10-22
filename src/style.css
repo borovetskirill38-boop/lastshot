@@ -3,6 +3,8 @@
   color: #eddfbd;
   background: #211d20;
   font-synthesis: none;
+  --page-gutter: clamp(12px, 2.4vw, 32px);
+  --page-block: clamp(10px, 2vh, 24px);
   --saloon-door-texture: url("./visuals/saloon-doors.webp?inline");
 }
 * {
@@ -12,11 +14,17 @@ body {
   margin: 0;
   background: radial-gradient(ellipse at 50% 40%, #42302a, transparent 70%);
   min-height: 100vh;
+  min-height: 100svh;
 }
 #app {
   max-width: 1120px;
   margin: auto;
-  padding: 24px 32px;
+  width: 100%;
+  padding:
+    max(var(--page-block), env(safe-area-inset-top, 0px))
+    max(var(--page-gutter), env(safe-area-inset-right, 0px))
+    max(var(--page-block), env(safe-area-inset-bottom, 0px))
+    max(var(--page-gutter), env(safe-area-inset-left, 0px));
 }
 header,
 footer {
@@ -24,6 +32,7 @@ footer {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
 }
 header {
   border-bottom: 1px solid #685143;
@@ -41,6 +50,8 @@ button {
   border: 1px solid #97754b;
   border-radius: 3px;
   padding: 12px 20px;
+  min-height: 44px;
+  max-width: 100%;
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -279,9 +290,6 @@ footer span {
   display: none !important;
 }
 @media (max-width: 650px) {
-  #app {
-    padding: 16px 12px;
-  }
   main {
     padding: 26px 0;
   }
@@ -414,9 +422,13 @@ body.in-menu main {
 }
 .level {
   position: relative;
-  display: block;
-  min-height: 300px;
-  padding: 0;
+  display: grid;
+  grid-template-rows: 32px minmax(90px, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 250px;
+  padding: 12px;
   border: 2px solid #91643b;
   border-radius: 5px 5px 2px 2px;
   background:
@@ -437,21 +449,17 @@ body.in-menu main {
   box-shadow: 0 18px 30px #0009, 0 0 24px #df9e3829, inset 0 0 0 5px #291a13;
 }
 .level b {
-  position: absolute;
-  top: 9px;
-  left: 0;
-  right: 0;
   font: 700 28px Georgia, serif;
   color: #e1b66e;
   text-shadow: 0 2px #130d09;
 }
 .saloon-doors {
-  position: absolute;
+  position: relative;
   display: block;
-  top: 48px;
-  left: 11px;
-  right: 11px;
-  height: 160px;
+  width: 100%;
+  aspect-ratio: 1.2;
+  min-height: 90px;
+  max-height: 170px;
   perspective: 650px;
   background: radial-gradient(ellipse at 50% 60%, #b5782938, #080808 65%);
   box-shadow: inset 0 10px 25px #000;
@@ -485,19 +493,17 @@ body.in-menu main {
   transform: rotateY(27deg);
 }
 .level > span {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 43px;
+  display: grid;
+  place-items: center;
+  min-height: 2.4em;
+  overflow-wrap: anywhere;
   color: #f4dbb0;
   font: 700 17px/1.2 Georgia, serif;
   text-shadow: 0 2px 3px #080603;
 }
 .level small {
-  position: absolute;
-  bottom: 13px;
-  left: 8px;
-  right: 8px;
+  min-height: 1.4em;
+  overflow-wrap: anywhere;
   color: #ddbb85;
   font: 9px/1.4 monospace;
   letter-spacing: 0.5px;
@@ -520,7 +526,7 @@ body.in-menu main {
   width: 24px;
   height: 21px;
   left: calc(50% - 12px);
-  top: 88px;
+  top: 55%;
   border: 1px solid #251d14;
   border-radius: 3px;
   background: linear-gradient(110deg, #67543a, #bd9d64 45%, #59452e);
@@ -663,7 +669,6 @@ body.in-menu footer {
 @keyframes entrance-right { to { transform: rotateY(100deg); } }
 @media (max-width: 850px) and (min-width: 651px) {
   #levels { gap: 8px; }
-  .level { min-height: 282px; }
   .level > span { font-size: 15px; }
 }
 @media (max-width: 650px) {
@@ -673,11 +678,6 @@ body.in-menu footer {
   .hero .intro { font-size: 14px; max-width: 310px; margin: 16px auto 4px; }
   .menu-caption { font-size: 9px; letter-spacing: 2px; margin: 12px 0 22px; gap: 8px; }
   .menu-caption::before, .menu-caption::after { width: 25px; }
-  #levels { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; max-width: 420px; }
-  .level { min-height: 275px; }
-  .saloon-doors { height: 145px; }
-  .level > span { font-size: 16px; bottom: 43px; }
-  .level:last-child { grid-column: span 2; width: calc(50% - 7px); justify-self: center; }
   body.in-menu .instructions { font-size: 12px; padding: 10px 6px; }
   #menu-backdrop { background-position: 48% center; }
   .lantern-glow { width: 180px; }
@@ -793,7 +793,7 @@ body.in-arsenal #sound { background: #261c12e8; }
 #weapon-description { color: #ccb89b; font: 15px/1.7 Georgia, serif; min-height: 76px; }
 .weapon-statistics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr));
   gap: 10px;
   padding: 22px 0;
   margin: 20px 0 10px;
@@ -809,7 +809,7 @@ body.in-arsenal #sound { background: #261c12e8; }
 #arsenal-feedback { font: 12px/1.5 Georgia, serif; color: #e8c58e; }
 #arsenal-save-note { font: 11px/1.7 Georgia, serif; color: #a68e6e; margin-bottom: 0; }
 .loadout-readout { margin: 0; padding: 8px 14px; background: #241e1c; color: #bd9d6a; text-align: left; font: 11px monospace; }
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .armory-layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
   .weapon-rack { padding: 14px; }
   #weapon-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
@@ -821,7 +821,7 @@ body.in-arsenal #sound { background: #261c12e8; }
   .armory-topline > span { font-size: 8px; letter-spacing: 1px; }
   .armory-topline button { font-size: 12px; padding: 11px 13px; }
   .armory-heading { margin: 25px 0; }
-  .weapon-statistics { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 20px; }
+  .weapon-statistics { row-gap: 20px; }
   #weapon-description { min-height: 0; }
 }
 @media (max-width: 400px) {
@@ -834,4 +834,114 @@ body.in-arsenal #arsenal-backdrop { animation: workshop-enter 250ms ease-out bot
 @keyframes workshop-enter { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   body.in-arsenal #arsenal, body.in-arsenal #arsenal-backdrop { animation: none; }
+}
+
+/* Fluid layouts: content may scroll, but labels and controls never overlap. */
+header > span, main, section, .armory-layout > *, .weapon-card > *,
+.weapon-statistics > *, .equip-row > *, .hud > * { min-width: 0; }
+.hero h1, .hero .intro, .armory-heading, #weapon-name, #weapon-kind,
+#weapon-description, #arsenal-save-note, #arsenal-feedback, .loadout-readout,
+#result-text, .audio-credits, .weapon-statistics dd { overflow-wrap: anywhere; }
+.weapon-statistics dd { font-variant-numeric: tabular-nums; line-height: 1.15; }
+.armory-topline { flex-wrap: wrap; }
+.arsenal-entry { flex-wrap: wrap; justify-content: center; }
+#equip-weapon { min-width: min(180px, 100%); }
+.hud { flex-wrap: wrap; }
+#game-viewport {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  background: #161316;
+}
+body.in-play #app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 280px;
+}
+body.in-play header { flex: none; padding-bottom: 8px; gap: 8px; }
+body.in-play main { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 10px 0 0; }
+body.in-play #play {
+  display: grid;
+  grid-template-rows: auto auto minmax(100px, 1fr) auto;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+body.in-play .hud { padding: 7px 12px; gap: 3px 12px; font-size: clamp(10px, 1.1vw, 14px); }
+body.in-play .controls { display: grid; grid-template-columns: 1fr 1.2fr 1.4fr; margin-top: 8px; }
+body.in-play .controls button { min-width: 0; padding-inline: 6px; font-size: clamp(11px, 1.5vw, 15px); overflow-wrap: anywhere; }
+body.in-play footer, body.in-play .audio-credits { display: none; }
+#result {
+  padding:
+    max(12px, env(safe-area-inset-top, 0px))
+    max(12px, env(safe-area-inset-right, 0px))
+    max(12px, env(safe-area-inset-bottom, 0px))
+    max(12px, env(safe-area-inset-left, 0px));
+}
+.result-card {
+  min-width: 0;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - max(12px, env(safe-area-inset-top, 0px)) - max(12px, env(safe-area-inset-bottom, 0px)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: clamp(16px, 4vh, 40px);
+}
+#result h2 { font-size: clamp(24px, 4vw, 32px); }
+@media (max-width: 1000px) {
+  #levels { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; max-width: 780px; }
+}
+@media (max-width: 620px) {
+  #levels { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 440px; }
+  .level { padding: 10px; gap: 6px; min-height: 235px; }
+  .level > span { font-size: 15px; }
+  .level:last-child { grid-column: 1 / -1; width: calc((100% - 12px) / 2); justify-self: center; }
+  .hero h1 { font-size: clamp(30px, 9.5vw, 58px); }
+  #status-belt { top: 6px; right: 6px; gap: 4px; }
+  #ammo-belt, #life-belt { padding: 5px 6px; gap: 5px; }
+  #ammo-rounds { gap: 3px; }
+}
+@media (max-width: 420px) {
+  #weapon-list { grid-template-columns: minmax(0, 1fr); }
+  .weapon-card { grid-template-columns: 88px minmax(0, 1fr); column-gap: 12px; align-items: center; min-height: 76px; }
+  .weapon-card .weapon-icon { grid-row: 1 / 3; height: 54px; margin: 0; }
+  .weapon-card > span, .weapon-card small { grid-column: 2; }
+  .weapon-card > span { font-size: 15px; }
+  .weapon-card small { margin-top: 4px; }
+  .armory-topline > span { letter-spacing: 0.5px; }
+}
+@media (max-width: 320px) {
+  #levels { grid-template-columns: minmax(0, 1fr); max-width: 230px; }
+  .level:last-child { width: 100%; grid-column: auto; }
+  header { letter-spacing: 1.5px; }
+  .arsenal-entry small { border-left: 0; padding-left: 0; }
+  .hero .eyebrow { letter-spacing: 1px; }
+  .menu-caption { letter-spacing: 1px; gap: 6px; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  body.in-menu main, body.in-arsenal main { padding-top: 16px; }
+  .hero h1 { font-size: clamp(30px, 5vw, 52px); margin-block: 10px; }
+  .hero .intro, .menu-caption { margin-block: 12px; }
+  .armory-heading { margin-block: 16px; }
+  body.in-play #app { max-width: none; padding-block: max(6px, env(safe-area-inset-top, 0px)) max(6px, env(safe-area-inset-bottom, 0px)); }
+  body.in-play header { position: absolute; top: max(6px, env(safe-area-inset-top, 0px)); right: max(var(--page-gutter), env(safe-area-inset-right, 0px)); border: 0; padding: 0; z-index: 4; }
+  body.in-play header > span { display: none; }
+  body.in-play #sound { font-size: 11px; min-height: 44px; padding: 8px; }
+  body.in-play main { padding-top: 0; }
+  body.in-play .hud { min-height: 22px; padding: 2px 118px 2px 8px; font-size: 10px; }
+  body.in-play .loadout-readout { padding: 3px 118px 3px 8px; font-size: 10px; }
+  body.in-play .controls { margin-top: 6px; }
+}
+/* Combat badges respond to the rendered canvas, including short desktop windows. */
+#game { container-type: inline-size; }
+@container (max-width: 650px) {
+  #status-belt { top: 6px; right: 6px; gap: 4px; }
+  #ammo-belt, #life-belt { padding: 5px 6px; gap: 5px; }
+  .status-label { display: none; }
+  #life-hearts { font-size: 14px; }
+  #ammo-rounds { gap: 3px; }
+  .round { width: 6px; height: 17px; }
 }
