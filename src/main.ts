@@ -4,7 +4,8 @@ import { GameAudio } from "./audio";
 import { Armory } from "./armory";
 import { observeGameLayout } from "./layout";
 import { hitsWood } from "./surfaces.js";
-import { preloadArt, drawTown, createPerson, ViewWeapon } from "./art";
+import { preloadArt, drawTown, drawStreet, createPerson, ViewWeapon } from "./art";
+import { maps, readMap, hitsTarget } from "./maps.js";
 import { levels, readProgress, recordWin } from "./rules.js";
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
@@ -22,6 +23,8 @@ try {
 let progress = readProgress(storage),
   selected = 0;
 let townReady = false;
+let selectedMap = readMap(storage);
+let mapSaved = true;
 export const gameAudio = new GameAudio();
 const armory = new Armory(storage);
 type Target = {
@@ -31,6 +34,9 @@ type Target = {
   civilian: boolean;
   view: Phaser.GameObjects.Container;
   expires: number;
+  scale?: number;
+  coverY?: number;
+  appearedAt?: number;
 };
 class Town extends Phaser.Scene {
   weapon!: ViewWeapon;
@@ -52,14 +58,9 @@ class Town extends Phaser.Scene {
   bossHit = false;
   bossView?: Phaser.GameObjects.Container;
   bossBar?: Phaser.GameObjects.Text;
-  slots = [
-    { x: 230, y: 253 },
-    { x: 480, y: 253 },
-    { x: 730, y: 253 },
-    { x: 230, y: 405 },
-    { x: 480, y: 405 },
-    { x: 730, y: 405 },
-  ];
+  map = maps[0];
+  slots = this.map.slots;
+  scenery: Phaser.GameObjects.Image[] = [];
   constructor() {
     super("town");
   }
@@ -84,10 +85,14 @@ class Town extends Phaser.Scene {
     menu();
   }
   drawTown() {
-    drawTown(this, this.slots);
+    for (const layer of this.scenery) layer.destroy();
+    this.scenery = this.map.id === "street"
+      ? drawStreet(this, [...this.slots, this.map.boss])
+      : drawTown(this, this.slots);
   }
   person(x: number, y: number, civilian: boolean, boss = false) {
-    return createPerson(this, x, y, civilian, boss);
+    const position = boss ? this.map.boss : this.slots.find((slot) => slot.x === x && slot.y === y);
+    return createPerson(this, x, y, civilian, boss, position?.scale ?? 1, this.map.id === "street");
   }
   begin() {
     gameAudio.setMenu(false);
@@ -100,6 +105,11 @@ class Town extends Phaser.Scene {
     this.bossBar = undefined;
     this.bossOpen = false;
     this.bossHit = false;
+    if (this.map.id !== selectedMap.id) {
+      this.map = selectedMap;
+      this.slots = this.map.slots;
+      this.drawTown();
+    }
     this.weaponId = armory.equipped.id;
     this.capacity = armory.equipped.capacity;
     this.ammo = this.capacity;
@@ -173,7 +183,7 @@ class Town extends Phaser.Scene {
       onComplete: () => flash.destroy(),
     });
     if (selected === 4) {
-      if (this.bossOpen && Math.abs(x - 480) < 42 && y > 255 && y < 359) {
+      if (this.bossOpen && hitsTarget(x, y, this.map.boss)) {
         hitPerson = true;
         outcome = "enemy";
         gameAudio.play(this.bossHP === 1 ? "bossDeath" : "pain", pan);
@@ -185,9 +195,7 @@ class Town extends Phaser.Scene {
         if (!this.bossHP) this.finish(true);
       }
     } else {
-      const t = this.targets.find(
-        (t) => Math.abs(t.x - x) <= 40 && y >= t.y - 56 && y <= t.y + 43,
-      );
+      const t = this.targets.find((target) => hitsTarget(x, y, target));
       if (t) {
         hitPerson = true;
         outcome = t.civilian ? "civilian" : "enemy";
@@ -208,7 +216,7 @@ class Town extends Phaser.Scene {
       }
     }
     armory.record(this.weaponId, outcome);
-    if (!hitPerson && hitsWood(x, y, this.slots)) gameAudio.play("wood", pan);
+    if (!hitPerson && hitsWood(x, y, this.slots, this.map.id)) gameAudio.play("wood", pan);
     this.hud();
   }
   finish(win: boolean) {
@@ -260,16 +268,17 @@ class Town extends Phaser.Scene {
         this.bossOpen = !this.bossOpen;
         if (this.bossOpen) this.bossHit = false;
         this.bossView?.destroy();
-        this.bossView = this.person(480, 315, false, true);
-        this.bossView.setAlpha(this.bossOpen ? 1 : 0.3);
+        const boss = this.map.boss;
+        this.bossView = this.person(boss.x, boss.y, false, true);
+        this.bossView.setVisible(this.bossOpen);
         this.bossBar ??= this.add
-          .text(480, 192, "ГЛАВАРЬ  ♥♥♥♥♥♥", {
+          .text(boss.x, boss.y - 123, "ГЛАВАРЬ  ♥♥♥♥♥♥", {
             fontSize: "23px",
             color: "#ffdf99",
             backgroundColor: "#402d2b",
             padding: { x: 12, y: 8 },
           })
-          .setOrigin(0.5);
+          .setOrigin(0.5).setDepth(20);
         if (!this.bossOpen && !this.bossHit) {
           this.lives--;
           this.hud();
@@ -280,6 +289,11 @@ class Town extends Phaser.Scene {
       return;
     }
     for (const t of [...this.targets]) {
+      if (t.appearedAt !== undefined) {
+        const emergence = Math.min(1, (time - t.appearedAt) / 180);
+        t.view.y = t.y + 24 * (1 - emergence);
+        t.view.alpha = 0.4 + emergence * 0.6;
+      }
       if (time >= t.expires) {
         t.view.destroy();
         this.targets = this.targets.filter((v) => v !== t);
@@ -302,12 +316,14 @@ class Town extends Phaser.Scene {
           s = this.slots[slot],
           civilian = Math.random() < levels[selected].civilians;
         const view = this.person(s.x, s.y, civilian);
+        if (this.map.id === "street") view.setY(s.y + 24).setAlpha(0.4);
         this.targets.push({
           ...s,
           slot,
           civilian,
           view,
           expires: time + levels[selected].lifetime,
+          appearedAt: this.map.id === "street" ? time : undefined,
         });
       }
       this.nextSpawn = time + levels[selected].interval;
@@ -333,6 +349,38 @@ const gameLayout = observeGameLayout(el("game-viewport"), el("game"), (width, he
 });
 game.events.once("destroy", () => gameLayout.destroy());
 
+function updateMapPicker() {
+  const picker = el("map-options");
+  if (!picker.childElementCount) {
+    for (const map of maps) {
+      const button = document.createElement("button");
+      button.className = "map-card";
+      button.dataset.map = map.id;
+      button.innerHTML = `<i class="map-preview" aria-hidden="true"></i><span><b>${map.name}</b><small>${map.time}</small></span><i class="map-check" aria-hidden="true">✓</i>`;
+      button.onclick = () => {
+        selectedMap = map;
+        try {
+          storage.setItem("lastshot-map", map.id);
+          mapSaved = true;
+        } catch {
+          mapSaved = false;
+        }
+        updateMapPicker();
+        gameAudio.play("hover");
+      };
+      button.addEventListener("pointerenter", (event) => {
+        if (event.pointerType !== "touch") gameAudio.play("hover");
+      });
+      picker.append(button);
+    }
+  }
+  for (const button of picker.querySelectorAll<HTMLButtonElement>("button")) {
+    button.setAttribute("aria-pressed", String(button.dataset.map === selectedMap.id));
+  }
+  document.body.dataset.map = selectedMap.id;
+  el("map-description").textContent = `${selectedMap.description} ${mapSaved ? "Карта доступна во всех пяти режимах." : "Выбор действует до закрытия страницы."}`;
+}
+
 function menu() {
   gameAudio.stop();
   gameAudio.setPaused(false);
@@ -347,6 +395,7 @@ function menu() {
   document.body.classList.add("in-menu");
   window.scrollTo(0, 0);
   document.querySelector(".saloon-transition")?.remove();
+  updateMapPicker();
   el("levels").replaceChildren();
   levels.forEach((l, i) => {
     const b = document.createElement("button");
@@ -397,7 +446,7 @@ function start(i: number) {
   el("menu").hidden = true;
   el("result").hidden = true;
   el("play").hidden = false;
-  el("level-name").textContent = `${i + 1}. ${levels[i].name}`;
+  el("level-name").textContent = `${i + 1}. ${levels[i].name} · ${selectedMap.name}`;
   scene.begin();
   gameLayout.fit();
   window.scrollTo(0, 0);

@@ -3,6 +3,7 @@ import townTexture from "./visuals/town.webp?inline";
 import peopleTexture from "./visuals/people.webp?inline";
 import weaponTexture from "./visuals/revolver-hand.webp?inline";
 import arsenalModels from "./visuals/arsenal-models.webp?inline";
+import streetTexture from "./visuals/street-dusk.webp?inline";
 
 type Graphics = Phaser.GameObjects.Graphics;
 const townArtworkKey = "town-artwork";
@@ -20,6 +21,7 @@ const appearances = new WeakMap<
 /** Inline images load through Phaser, including when the HTML runs offline. */
 export function preloadArt(scene: Phaser.Scene) {
   scene.load.image(townArtworkKey, townTexture);
+  scene.load.image("street-dusk", streetTexture);
   scene.load.image(peopleKey, peopleTexture);
   scene.load.image("revolver-hand", weaponTexture);
   scene.load.image("arsenal-models", arsenalModels);
@@ -73,14 +75,14 @@ export function drawTown(
     baked.refresh();
   }
   const source = scene.textures.get(sceneryKey).getSourceImage();
-  scene.add
+  const layers = [scene.add
     .image(0, 0, sceneryKey)
     .setOrigin(0)
     .setDisplaySize(960, 540)
-    .setDepth(-1);
+    .setDepth(-1).setName("map-background")];
   // Foreground sills hide the waist edge so people stand inside the windows.
   for (const slot of slots) {
-    scene.add
+    layers.push(scene.add
       .image(0, 0, sceneryKey)
       .setOrigin(0)
       .setDisplaySize(960, 540)
@@ -90,8 +92,30 @@ export function drawTown(
         (146 * source.width) / 960,
         (14 * source.height) / 540,
       )
-      .setDepth(15);
+      .setDepth(15));
   }
+  return layers;
+}
+
+/** Restore the painted foreground over waists; the cover is also used for hits. */
+export function drawStreet(
+  scene: Phaser.Scene,
+  covers: { x: number; y: number; scale: number; coverY: number }[],
+) {
+  const key = "street-dusk";
+  const source = scene.textures.get(key).getSourceImage();
+  const layers = [scene.add.image(0, 0, key).setOrigin(0)
+    .setDisplaySize(960, 540).setDepth(-1).setName("map-background")];
+  for (const cover of covers) {
+    layers.push(scene.add.image(0, 0, key).setOrigin(0).setDisplaySize(960, 540)
+      .setCrop(
+        (cover.x - 60 * cover.scale) * source.width / 960,
+        cover.coverY * source.height / 540,
+        120 * cover.scale * source.width / 960,
+        (cover.y + 90 * cover.scale - cover.coverY) * source.height / 540,
+      ).setDepth(15));
+  }
+  return layers;
 }
 
 /** All appearances share one atlas; each role cycles without changing gameplay RNG. */
@@ -101,6 +125,8 @@ export function createPerson(
   y: number,
   civilian: boolean,
   boss = false,
+  scale = 1,
+  dusk = false,
 ) {
   const texture = scene.textures.get(peopleKey);
   const source = texture.getSourceImage();
@@ -132,8 +158,10 @@ export function createPerson(
     .image(0, 0, peopleKey, variant)
     .setOrigin(0.5, 0.57)
     .setDisplaySize(84, 112);
+  if (dusk) portrait.setTint(0xe4d8d6);
   return scene.add
     .container(x, y, [shadow, portrait])
+    .setScale(scale)
     .setDepth(10)
     .setData({ appearance: variant, civilian, boss });
 }

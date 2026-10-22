@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { hitsWood } from "../src/surfaces.js";
+import { maps } from "../src/maps.js";
 const slots = [
   { x: 230, y: 253 },
   { x: 480, y: 253 },
@@ -31,4 +32,15 @@ test("open windows and sky have no wood sound", () => {
     [NaN, 200],
   ])
     assert.equal(hitsWood(x, y, slots), false, `${x},${y}`);
+});
+
+test("street wood matches cover and facades, with silent open doorways, dirt and sky", () => {
+  const street = maps[1];
+  for (const [x, y] of [[241, 315], [528, 319], [728, 380], [200, 200], [900, 210]]) {
+    assert.equal(hitsWood(x, y, street.slots, "street"), true, `${x},${y}`);
+  }
+  for (const [x, y] of [[480, 100], [450, 420], [80, 180], [870, 180], [-1, 200], [NaN, 200]]) {
+    assert.equal(hitsWood(x, y, street.slots, "street"), false, `${x},${y}`);
+  }
+  assert.equal(hitsWood(728, 340, street.slots, "street"), true);
 });

@@ -51,3 +51,19 @@ loaded once; no image is generated or downloaded per shot.
 Selection and statistics do not depend on artwork decoding or image pixels. The
 selected model and magazine capacity apply when a new run begins. Images remain
 embedded in the standalone HTML; no network is needed for the workshop.
+
+## Twilight street
+
+- `street-dusk.webp`: original AI-generated 1672×941 panorama, WebP quality 94.
+  Frontier houses and verandas line both sides of a dusty street; a wooden wagon,
+  cargo crates and oak barrels provide foreground cover. Oil lamps complement
+  readable early twilight, with a peach/lavender sky and distant mesas.
+- `map-saloon-preview.webp`, `map-street-preview.webp`: small WebP derivatives of
+  the two environments, at most 320×196, quality 88, for the menu selector.
+
+The street uses the same fixed 960×540 world as the saloon. Its target centers,
+distance scales, cover tops and boss position are measured in `src/maps.js`.
+Cached crops of the panorama at depth 15 mask the character waists at depth 10;
+hit testing uses those same cover tops. The upper-body sprites receive a subtle
+twilight tint. Spawn emergence uses game time, so pause freezes it. Changing maps
+destroys the old scenery objects while keeping shared textures loaded once.
