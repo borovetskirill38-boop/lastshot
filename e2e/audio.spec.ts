@@ -10,6 +10,7 @@ test("recordings decode, produce an audio signal, and obey mute and voice limits
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   const result = await page.evaluate(async () => {
     const { gameAudio } = await import("/src/main.ts");
+    gameAudio.setMenu(false);
     const a = gameAudio as any;
     const buffers = [...a.buffers.values()] as AudioBuffer[];
     const summaries = buffers.map((b) => {
@@ -45,10 +46,10 @@ test("recordings decode, produce an audio signal, and obey mute and voice limits
     gameAudio.play("shot");
     return { summaries, signal, active, muted: gameAudio.state };
   });
-  expect(result.summaries).toHaveLength(9);
+  expect(result.summaries).toHaveLength(13);
   for (const b of result.summaries) {
     expect(b.duration).toBeGreaterThan(0.18);
-    expect(b.duration).toBeLessThan(1.2);
+    expect(b.duration).toBeLessThan(13);
     expect(b.peak).toBeGreaterThan(0.1);
     expect(b.peak).toBeLessThan(1);
     expect(b.rms).toBeGreaterThan(0.001);
@@ -123,11 +124,11 @@ test("hits route to the right material and reload audio pauses, resumes and canc
       lives: s.lives,
     };
   });
-  expect(sounds.enemy).toEqual(["shot", "body", "pain"]);
+  expect(sounds.enemy).toEqual(["shot", "banditDeath"]);
   expect(sounds.wood).toEqual(["shot", "wood"]);
   expect(sounds.window).toEqual(["shot"]);
   expect(sounds.sky).toEqual(["shot"]);
-  expect(sounds.civilian).toEqual(["shot", "body"]);
+  expect(sounds.civilian).toEqual(["shot", "civilianDeath"]);
   expect(sounds.lives).toBe(2);
   expect(sounds.reload).toEqual(["reload"]);
   const state = () =>
@@ -174,10 +175,17 @@ test("hits route to the right material and reload audio pauses, resumes and canc
     gameAudio.play = (kind) => {
       events.push(kind);
     };
-    (game.scene.getScene("town") as any).shoot(480, 315);
-    return events;
+    const s = game.scene.getScene("town") as any;
+    s.shoot(480, 315);
+    const wounded = [...events];
+    s.bossHP = 1;
+    events.length = 0;
+    s.shoot(480, 315);
+    return { wounded, fatal: [...events], ended: s.ended };
   });
-  expect(boss).toEqual(["shot", "body", "pain"]);
+  expect(boss.wounded).toEqual(["shot", "pain"]);
+  expect(boss.fatal).toEqual(["shot", "banditDeath"]);
+  expect(boss.ended).toBe(true);
   expect(errors).toEqual([]);
 });
 
@@ -201,5 +209,65 @@ test("unavailable Web Audio does not break shooting", async ({ page }) => {
   const box = await page.locator("canvas").boundingBox();
   await page.mouse.click(box!.x + 20, box!.y + 20);
   await expect(page.locator("#stats")).toContainText("Патроны 5/6");
+  expect(errors).toEqual([]);
+});
+
+test("menu music and ambience are unique loops, stop for play, mute and hide, and return cleanly", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Переключить звук" }).click();
+  await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
+  const state = () =>
+    page.evaluate(async () => {
+      const { gameAudio } = await import("/src/main.ts");
+      return gameAudio.state;
+    });
+  expect((await state()).background).toEqual(["menuMusic", "menuAmbience"]);
+  const loops = await page.evaluate(async () => {
+    const { gameAudio } = await import("/src/main.ts");
+    const a = gameAudio as any;
+    gameAudio.setMenu(true);
+    gameAudio.setMenu(true);
+    return [...a.beds.entries()].map(([name, bed]: any) => ({
+      name,
+      loop: bed.source.loop,
+      duration: bed.source.buffer.duration,
+    }));
+  });
+  expect(loops).toHaveLength(2);
+  for (const loop of loops) {
+    expect(loop.loop).toBe(true);
+    expect(loop.duration).toBeGreaterThan(10);
+  }
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      value: true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect.poll(async () => (await state()).context).toBe("suspended");
+  expect((await state()).hidden).toBe(true);
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      value: false,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect.poll(async () => (await state()).context).toBe("running");
+  expect((await state()).background).toHaveLength(2);
+  await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
+  expect((await state()).background).toEqual([]);
+  await page.getByRole("button", { name: "← Уровни" }).click();
+  expect((await state()).background).toHaveLength(2);
+  await page.getByRole("button", { name: "Переключить звук" }).click();
+  expect((await state()).background).toEqual([]);
+  await page.getByRole("button", { name: "Переключить звук" }).click();
+  await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
+  expect((await state()).background).toHaveLength(2);
   expect(errors).toEqual([]);
 });

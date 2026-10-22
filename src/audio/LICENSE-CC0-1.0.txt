@@ -1,0 +1,12 @@
+CC0 1.0 Universal — Public Domain Dedication
+
+The sound files in this repository were dedicated to the public domain by their creators under CC0 1.0 Universal:
+  - The Free Firearm Sound Library — Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney
+  - Medieval Sound Effects (Weapon Textures; Weapon Impacts) — Ben Jaszczak, Brian Nelson (Still North Media)
+
+To the extent possible under law, the curator of this repository has also waived all copyright and related or neighbouring
+rights to the selection, the cuts and the manifest, under CC0 1.0 Universal.
+
+You can copy, modify, distribute and use the work, even for commercial purposes, all without asking permission.
+
+Full legal code: https://creativecommons.org/publicdomain/zero/1.0/legalcode

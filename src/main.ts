@@ -79,6 +79,7 @@ class Town extends Phaser.Scene {
     return createPerson(this, x, y, civilian, boss);
   }
   begin() {
+    gameAudio.setMenu(false);
     gameAudio.stop();
     gameAudio.setPaused(false);
     for (const t of this.targets) t.view.destroy();
@@ -158,8 +159,7 @@ class Town extends Phaser.Scene {
     if (selected === 4) {
       if (this.bossOpen && Math.abs(x - 480) < 42 && y > 255 && y < 359) {
         hitPerson = true;
-        gameAudio.play("body", pan);
-        gameAudio.play("pain", pan);
+        gameAudio.play(this.bossHP === 1 ? "banditDeath" : "pain", pan);
         this.bossHP--;
         this.bossHit = true;
         this.kills++;
@@ -173,8 +173,7 @@ class Town extends Phaser.Scene {
       );
       if (t) {
         hitPerson = true;
-        gameAudio.play("body", pan);
-        if (!t.civilian) gameAudio.play("pain", pan);
+        gameAudio.play(t.civilian ? "civilianDeath" : "banditDeath", pan);
         t.view.destroy();
         this.targets = this.targets.filter((v) => v !== t);
         if (t.civilian) this.lives--;
@@ -311,6 +310,7 @@ export const game = new Phaser.Game({
 function menu() {
   gameAudio.stop();
   gameAudio.setPaused(false);
+  gameAudio.setMenu(true);
   scene.ended = true;
   el("play").hidden = true;
   el("result").hidden = true;
@@ -354,6 +354,7 @@ el("sound").onclick = () => {
   });
 };
 document.addEventListener("visibilitychange", () => {
+  gameAudio.setHidden(document.hidden);
   if (document.hidden && !scene.ended && !scene.paused) scene.togglePause();
 });
 menu();

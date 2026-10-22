@@ -3,26 +3,47 @@ import shot2 from "./audio/shot-2.mp3?inline";
 import reload from "./audio/reload.mp3?inline";
 import wood1 from "./audio/wood-1.mp3?inline";
 import wood2 from "./audio/wood-2.mp3?inline";
-import body from "./audio/body.mp3?inline";
+import banditDeath1 from "./audio/bandit-death-1.mp3?inline";
+import banditDeath2 from "./audio/bandit-death-2.mp3?inline";
+import civilianDeath from "./audio/civilian-death.mp3?inline";
+import menuMusic from "./audio/menu-music.mp3?inline";
+import menuAmbience from "./audio/menu-ambience.mp3?inline";
 import pain1 from "./audio/pain-1.mp3?inline";
 import pain2 from "./audio/pain-2.mp3?inline";
 import pain3 from "./audio/pain-3.mp3?inline";
 
-const clips = { shot1, shot2, reload, wood1, wood2, body, pain1, pain2, pain3 };
+const clips = {
+  shot1,
+  shot2,
+  reload,
+  wood1,
+  wood2,
+  banditDeath1,
+  banditDeath2,
+  civilianDeath,
+  pain1,
+  pain2,
+  pain3,
+  menuMusic,
+  menuAmbience,
+};
 type Clip = keyof typeof clips;
-export type SoundEffect = "shot" | "reload" | "wood" | "body" | "pain";
+export type SoundEffect =
+  "shot" | "reload" | "wood" | "banditDeath" | "civilianDeath" | "pain";
 const variants: Record<SoundEffect, Clip[]> = {
   shot: ["shot1", "shot2"],
   reload: ["reload"],
   wood: ["wood1", "wood2"],
-  body: ["body"],
+  banditDeath: ["banditDeath1", "banditDeath2"],
+  civilianDeath: ["civilianDeath"],
   pain: ["pain1", "pain2", "pain3"],
 };
 const volumes: Record<SoundEffect, number> = {
-  shot: 0.62,
+  shot: 0.48,
   reload: 0.48,
   wood: 0.46,
-  body: 0.4,
+  banditDeath: 0.68,
+  civilianDeath: 0.7,
   pain: 0.55,
 };
 type Voice = {
@@ -42,6 +63,12 @@ export class GameAudio {
   private master?: GainNode;
   private buffers = new Map<Clip, AudioBuffer>();
   private voices = new Set<Voice>();
+  private inMenu = true;
+  private hidden = false;
+  private beds = new Map<
+    "menuMusic" | "menuAmbience",
+    { source: AudioBufferSourceNode; gain: GainNode }
+  >();
   private lastClip = new Map<SoundEffect, Clip>();
 
   get state() {
@@ -52,6 +79,9 @@ export class GameAudio {
       context: this.context?.state ?? "uninitialized",
       loaded: this.buffers.size,
       active: this.voices.size,
+      background: [...this.beds.keys()],
+      inMenu: this.inMenu,
+      hidden: this.hidden,
     };
   }
   async setEnabled(enabled: boolean): Promise<void> {
@@ -91,8 +121,9 @@ export class GameAudio {
           .catch(() => this.unavailable());
       }
       this.setGain();
-      if (!this.paused) await this.context.resume();
+      if (!this.paused && !this.hidden) await this.context.resume();
       await this.ready;
+      this.syncMenu();
     } catch {
       this.unavailable();
     }
@@ -106,22 +137,73 @@ export class GameAudio {
   private setGain() {
     if (!this.context || !this.master) return;
     this.master.gain.setValueAtTime(
-      this.enabled && !this.paused ? 0.72 : 0,
+      this.enabled && !this.paused && !this.hidden ? 0.72 : 0,
       this.context.currentTime,
     );
   }
   setPaused(paused: boolean) {
     this.paused = paused;
+    this.syncContext();
+  }
+  setHidden(hidden: boolean) {
+    this.hidden = hidden;
+    this.syncContext();
+  }
+  private syncContext() {
     this.setGain();
     if (!this.context) return;
-    const change = paused
+    const blocked = this.paused || this.hidden;
+    const change = blocked
       ? this.context.suspend()
       : this.enabled
         ? this.context.resume()
         : undefined;
     void change?.catch(() => this.unavailable());
+    if (!blocked) this.syncMenu();
+  }
+  setMenu(inMenu: boolean) {
+    this.inMenu = inMenu;
+    this.syncMenu();
+  }
+  private syncMenu() {
+    if (!this.inMenu || !this.enabled || this.failed) {
+      this.stopBeds();
+      return;
+    }
+    const context = this.context,
+      master = this.master;
+    if (!context || !master || this.paused || this.hidden) return;
+    for (const clip of ["menuMusic", "menuAmbience"] as const) {
+      if (this.beds.has(clip)) continue;
+      const buffer = this.buffers.get(clip);
+      if (!buffer) continue;
+      const source = context.createBufferSource(),
+        gain = context.createGain();
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(gain);
+      gain.connect(master);
+      gain.gain.setValueAtTime(0, context.currentTime);
+      gain.gain.linearRampToValueAtTime(
+        clip === "menuMusic" ? 0.22 : 0.16,
+        context.currentTime + 0.6,
+      );
+      this.beds.set(clip, { source, gain });
+      source.start();
+    }
+  }
+  private stopBeds() {
+    for (const { source, gain } of this.beds.values()) {
+      try {
+        source.stop();
+      } catch {}
+      source.disconnect();
+      gain.disconnect();
+    }
+    this.beds.clear();
   }
   stop(kind?: SoundEffect) {
+    if (!kind) this.stopBeds();
     for (const voice of [...this.voices]) {
       if (kind && voice.kind !== kind) continue;
       // stop() also cancels delayed pain samples, so mute/menu never play stale audio.
@@ -146,6 +228,7 @@ export class GameAudio {
     if (
       !this.enabled ||
       this.paused ||
+      this.hidden ||
       this.failed ||
       !context ||
       !master ||
@@ -173,18 +256,17 @@ export class GameAudio {
       gain = context.createGain();
     source.buffer = buffer;
     source.playbackRate.value =
-      kind === "reload"
+      kind === "reload" || kind === "shot"
         ? 1
-        : kind === "pain"
-          ? 0.96 + Math.random() * 0.08
-          : 0.98 + Math.random() * 0.04;
+        : kind === "civilianDeath"
+          ? 1.06
+          : kind === "banditDeath"
+            ? 0.96
+            : 0.98 + Math.random() * 0.04;
+    const vocal =
+      kind === "pain" || kind === "banditDeath" || kind === "civilianDeath";
     const start =
-      context.currentTime +
-      (kind === "pain"
-        ? 0.045
-        : kind === "wood" || kind === "body"
-          ? 0.018
-          : 0);
+      context.currentTime + (vocal ? 0.065 : kind === "wood" ? 0.018 : 0);
     gain.gain.setValueAtTime(0, start);
     gain.gain.linearRampToValueAtTime(volumes[kind], start + 0.002);
     const pan =
