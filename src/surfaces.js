@@ -1,4 +1,5 @@
 import { streetWood } from "./maps.js";
+import { mapProps } from "./props.js";
 
 function inPolygon(x, y, points) {
   let inside = false;
@@ -22,6 +23,7 @@ export function hitsWood(x, y, slots, mapId = "saloon") {
     return false;
   const inRect = (left, top, right, bottom) =>
     x >= left && x <= right && y >= top && y <= bottom;
+  if (mapProps[mapId]?.some((prop) => inPolygon(x, y, prop.outline))) return true;
   if (mapId === "tavern") {
     // Wooden walls, floor and furniture; glass, mirrors, dark passage and rugs differ.
     return !(inPolygon(x, y, [[107, 52], [151, 77], [151, 222], [107, 221]])
@@ -50,6 +52,9 @@ export function hitsWood(x, y, slots, mapId = "saloon") {
     inRect(94, 111, 873, 147) ||
     inRect(318, 58, 648, 130) ||
     inRect(66, 458, 908, 482) ||
+    inRect(336, 482, 623, 518) || // New central wooden steps.
+    inRect(310, 417, 350, 515) ||
+    inRect(620, 417, 660, 515) || // Short porch handrails.
     inRect(26, 392, 80, 464) ||
     inRect(881, 405, 927, 467) ||
     inRect(8, 452, 69, 506)

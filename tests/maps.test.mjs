@@ -26,7 +26,7 @@ test("curved table and slanted bar cover protect exactly the drawn upper edge", 
 test("all spawn positions have visible hit areas inside the world and distinct target centers", () => {
   assert.equal(new Set(maps.map((map) => map.id)).size, maps.length);
   for (const map of maps) {
-    assert.equal(map.slots.length, 6);
+    assert.equal(map.slots.length, map.id === "saloon" ? 6 : 8);
     for (const position of map.slots) {
       assert.ok(position.x - 40 * position.scale >= 0);
       assert.ok(position.x + 40 * position.scale <= 960);
@@ -36,6 +36,20 @@ test("all spawn positions have visible hit areas inside the world and distinct t
     }
     for (const position of map.slots) {
       assert.equal(map.slots.filter((slot) => hitsTarget(position.x, position.y, slot)).length, 1);
+    }
+  }
+});
+
+test("new obstacle edges protect the waist while leaving separate visible firing targets", () => {
+  for (const map of maps.filter((map) => map.id !== "saloon")) {
+    const added = map.slots.filter((slot) => slot.prop);
+    assert.equal(added.length, 2);
+    for (const slot of added) for (const offset of [-30, 0, 30]) {
+      const x = slot.x + offset * slot.scale;
+      const edge = coverTopAt(x, slot);
+      assert.ok(edge > slot.y);
+      assert.equal(hitsTarget(x, edge + 3, slot), false);
+      assert.equal(hitsTarget(x, slot.y, slot), true);
     }
   }
 });

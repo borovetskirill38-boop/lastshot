@@ -1,3 +1,5 @@
+import { mapProps } from "./props.js";
+
 // Upper edges measured on tavern.webp. The same lines mask sprites and stop shots.
 const tavernBar = [[658, 231], [720, 235], [820, 243], [960, 260]];
 const tavernRoundTable = [[156, 330], [164, 285], [186, 250], [218, 235], [244, 233], [276, 242], [301, 266], [322, 305], [332, 350]];
@@ -21,7 +23,7 @@ export const maps = [
     time: "Полдень",
     tint: 0xffffff,
     emerge: false,
-    description: "Знакомый салун: шесть окон, выжженная солнцем древесина и пыльная площадь.",
+    description: "Салун с крыльцом, ступенями и перилами. Наверху — три спальни, внизу — кухня, питейный зал и бар.",
     slots: [
       { x: 230, y: 253, scale: 1, coverY: 297 },
       { x: 480, y: 253, scale: 1, coverY: 297 },
@@ -37,7 +39,7 @@ export const maps = [
     time: "Лёгкие сумерки",
     tint: 0xe4d8d6,
     emerge: true,
-    description: "Дома и освещённые веранды по обе стороны улицы. Бандиты прячутся за телегой, ящиками и бочками.",
+    description: "Сумеречная улица с восемью укрытиями: телега, ящики, бочки, поилка для лошадей и опрокинутая грузовая тележка.",
     slots: [
       { x: 83, y: 242, scale: 1, coverY: 282 },
       { x: 241, y: 240, scale: 1, coverY: 278 },
@@ -45,6 +47,7 @@ export const maps = [
       { x: 528, y: 249, scale: 0.9, coverY: 282 },
       { x: 871, y: 242, scale: 1, coverY: 288 },
       { x: 728, y: 303, scale: 1.06, coverY: 337 },
+      ...mapProps.street.map((prop) => prop.slot),
     ],
   },
   {
@@ -53,7 +56,7 @@ export const maps = [
     time: "Свет керосиновых ламп",
     tint: 0xffe4c4,
     emerge: true,
-    description: "Барная стойка, перевёрнутые столы и бочки у пианино. В подсобке за ящиками тоже может прятаться бандит.",
+    description: "Восемь укрытий среди столов, бочек и барной стойки. Бандиты появляются также за сундуком и ящиками с напитками.",
     slots: [
       { x: 151, y: 194, scale: 0.88, coverY: 222, coverProfile: tavernBarrels },
       { x: 241, y: 205, scale: 1.05, coverY: 234, coverProfile: tavernRoundTable },
@@ -61,6 +64,7 @@ export const maps = [
       { x: 474, y: 194, scale: 0.68, coverY: 219, coverProfile: tavernCrates },
       { x: 697, y: 202, scale: 0.9, coverY: 234, coverProfile: tavernBar },
       { x: 866, y: 218, scale: 1.02, coverY: 249, coverProfile: tavernBar },
+      ...mapProps.tavern.map((prop) => prop.slot),
     ],
   },
 ];

@@ -19,6 +19,8 @@ test("visible wood: facade, frame, shutter, sign, porch, barrel and crate", () =
     [450, 470],
     [53, 430],
     [35, 480],
+    [450, 500],
+    [330, 450],
   ])
     assert.equal(hitsWood(x, y, slots), true, `${x},${y}`);
 });
@@ -39,10 +41,18 @@ test("street wood matches cover and facades, with silent open doorways, dirt and
   for (const [x, y] of [[241, 315], [528, 319], [728, 380], [200, 200], [900, 210]]) {
     assert.equal(hitsWood(x, y, street.slots, "street"), true, `${x},${y}`);
   }
-  for (const [x, y] of [[480, 100], [450, 420], [80, 180], [870, 180], [-1, 200], [NaN, 200]]) {
+  for (const [x, y] of [[480, 100], [500, 500], [80, 180], [870, 180], [-1, 200], [NaN, 200]]) {
     assert.equal(hitsWood(x, y, street.slots, "street"), false, `${x},${y}`);
   }
   assert.equal(hitsWood(728, 340, street.slots, "street"), true);
+});
+
+test("added street and tavern obstacles make wooden impacts below their cover edges", () => {
+  for (const map of maps.filter((map) => map.id !== "saloon")) {
+    for (const slot of map.slots.filter((slot) => slot.prop)) {
+      assert.equal(hitsWood(slot.x, slot.coverY + 8, map.slots, map.id), true);
+    }
+  }
 });
 
 test("tavern furniture and planks sound wooden; glass, rugs and dark passage do not", () => {

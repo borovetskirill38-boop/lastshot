@@ -7,9 +7,9 @@ background and 96 for the weapon; transparency is preserved. Playback
 and rendering require no external image server.
 
 - `town.webp`: sunlit saloon, weathered wood, iron barrel hoops, crate, dusty
-  ground and distant mesas. The six dark window openings use the original game
+  ground and distant mesas. The six furnished window openings use the original game
   layout: vertical artwork landmarks are aligned once into a cached 960×540
-  canvas texture. Foreground window sills are drawn over the character waists.
+  canvas texture. Foreground window sills are drawn over the character waists. The exterior now includes broad porch steps, handrails, lanterns, buckets, rope, flowers and a saddle. Upstairs openings show three distinct furnished bedrooms; downstairs show a kitchen, drinking hall and carved bar. Room detail is visible rather than black.
 - `people.webp`: transparent four-column, two-row atlas. Top row: mustached
   outlaw, bandolier outlaw, scarred outlaw, gang boss. Bottom row: shopkeeper,
   woman with basket, ranch worker with rope, young reader. The three bandits
@@ -77,11 +77,11 @@ destroys the old scenery objects while keeping shared textures loaded once.
   into the environment.
 - `map-tavern-preview.webp`: small menu derivative, maximum 320×196, quality 88.
 
-Six target positions and the boss have measured scale, warm tint and cover
+The original six target positions have measured scale, warm tint and cover
 profiles. The upper edges in `src/maps.js` define both the cached 960×540 alpha
 foreground and hit testing: a round table curves, and the bar slopes with
 perspective. The foreground texture is created once on the first interior visit;
-subsequent visits reuse it. Only two scenery images are needed for the room.
+subsequent visits reuse it. Two scenery images restore the original room; two additional prop images add new foreground cover.
 Emergence uses the existing pause-safe gameplay clock. All assets remain embedded
 in the standalone HTML, including the selector preview and menu background.
 
@@ -116,3 +116,22 @@ share one Phaser texture, and use each cover's scale and foreground mask. CSS us
 the same embedded image for dialogue frames. The old boss cell in `people.webp`
 is no longer used in combat. Position changes, phases and pause all use game time;
 no new image is created at each appearance. All assets work in the standalone HTML.
+
+## Additional cover on the street and inside the saloon
+
+- `cover-props.webp`: original AI-generated transparent 1254×1254 atlas, quality
+  94 WebP. Four measured frames: horse water trough and overturned handcart in
+  twilight lighting, and a closed supply chest and beer crates in amber light.
+  All four share one preloaded texture; no network or per-spawn image creation.
+- `src/props.js` stores atlas frames, alpha-measured upper silhouettes, world
+  placement and the two extra spawn positions per map. Upper profiles come from
+  the visible silhouette (alpha > 127), then transform into the fixed 960×540
+  world. The same profiles stop covered shots and identify wooden impacts.
+- Existing furniture remains at depth 15. Characters at the new foreground
+  obstacles use depth 20, and the transparent props at depth 25 hide their waists.
+  Regular enemies, civilians and Billy with or without Suzzie share this rule.
+- Each street/interior now has eight positions. All three menu previews are
+  captured from actual game rendering without characters, weapons or crosshair.
+
+The saloon facade was edited from the original image with image generation,
+retaining all six window frame landmarks and the original noon lighting.

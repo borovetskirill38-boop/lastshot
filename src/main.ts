@@ -99,7 +99,9 @@ class Town extends Phaser.Scene {
   }
   person(x: number, y: number, civilian: boolean, boss = false) {
     const position = this.slots.find((slot) => slot.x === x && slot.y === y);
-    return createPerson(this, x, y, civilian, boss, position?.scale ?? 1, this.map.tint);
+    const view = createPerson(this, x, y, civilian, boss, position?.scale ?? 1, this.map.tint);
+    if (position && "prop" in position) view.setDepth(20);
+    return view;
   }
   begin() {
     this.intro = true;
@@ -184,6 +186,7 @@ class Town extends Phaser.Scene {
     const p = this.bossPosition;
     this.bossView = createBoss(this, p.x, p.y, p.scale, this.map.tint,
       phase === "hostage" ? "shield" : phase === "defeated" ? "hostage" : "boss");
+    if ("prop" in p) this.bossView.setDepth(20);
   }
   reload() {
     if (this.intro || this.ended || this.paused || this.reloading || this.ammo === this.capacity) return;

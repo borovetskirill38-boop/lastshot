@@ -6,7 +6,9 @@ import arsenalModels from "./visuals/arsenal-models.webp?inline";
 import streetTexture from "./visuals/street-dusk.webp?inline";
 import tavernTexture from "./visuals/tavern.webp?inline";
 import bossTexture from "./visuals/boss-encounter.webp?inline";
+import propTexture from "./visuals/cover-props.webp?inline";
 import { tavernCovers } from "./maps.js";
+import { mapProps, propFrames } from "./props.js";
 
 type Graphics = Phaser.GameObjects.Graphics;
 const townArtworkKey = "town-artwork";
@@ -27,6 +29,7 @@ export function preloadArt(scene: Phaser.Scene) {
   scene.load.image("street-dusk", streetTexture);
   scene.load.image("tavern", tavernTexture);
   scene.load.image("boss-encounter", bossTexture);
+  scene.load.image("cover-props", propTexture);
   scene.load.image(peopleKey, peopleTexture);
   scene.load.image("revolver-hand", weaponTexture);
   scene.load.image("arsenal-models", arsenalModels);
@@ -105,13 +108,14 @@ export function drawTown(
 /** Restore the painted foreground over waists; the cover is also used for hits. */
 export function drawStreet(
   scene: Phaser.Scene,
-  covers: { x: number; y: number; scale: number; coverY: number }[],
+  covers: { x: number; y: number; scale: number; coverY: number; prop?: string }[],
 ) {
   const key = "street-dusk";
   const source = scene.textures.get(key).getSourceImage();
   const layers = [scene.add.image(0, 0, key).setOrigin(0)
     .setDisplaySize(960, 540).setDepth(-1).setName("map-background")];
   for (const cover of covers) {
+    if (cover.prop) continue;
     layers.push(scene.add.image(0, 0, key).setOrigin(0).setDisplaySize(960, 540)
       .setCrop(
         (cover.x - 60 * cover.scale) * source.width / 960,
@@ -120,7 +124,19 @@ export function drawStreet(
         (cover.y + 90 * cover.scale - cover.coverY) * source.height / 540,
       ).setDepth(15));
   }
+  layers.push(...drawProps(scene, "street"));
   return layers;
+}
+
+/** Transparent furniture is itself the foreground mask; all maps reuse one atlas. */
+function drawProps(scene: Phaser.Scene, mapId: "street" | "tavern") {
+  const texture = scene.textures.get("cover-props");
+  for (const [name, [x, y, width, height]] of Object.entries(propFrames)) {
+    if (!texture.has(name)) texture.add(name, 0, x, y, width, height);
+  }
+  return mapProps[mapId].map((prop) => scene.add.image(prop.x, prop.y, "cover-props", prop.frame)
+    .setOrigin(0.5, 0).setDisplaySize(prop.width, prop.height)
+    .setDepth(25).setName(`cover-${prop.frame}`));
 }
 
 /** Cache shaped foreground furniture once, without an extra mask per character. */
@@ -146,6 +162,7 @@ export function drawTavern(scene: Phaser.Scene) {
     scene.add.image(0, 0, "tavern").setOrigin(0).setDisplaySize(960, 540)
       .setDepth(-1).setName("map-background"),
     scene.add.image(0, 0, key).setOrigin(0).setDepth(15).setName("map-foreground"),
+    ...drawProps(scene, "tavern"),
   ];
 }
 

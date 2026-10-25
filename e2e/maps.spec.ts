@@ -7,8 +7,8 @@ const saloonButton = (page: Page) => page.getByRole("button", { name: "Салу�
 const tavernButton = (page: Page) => page.getByRole("button", { name: "Внутри салуна Свет керосиновых ламп", exact: true });
 const mapButton = { saloon: saloonButton, street: streetButton, tavern: tavernButton };
 const locations = [
-  { id: "street", title: "Улица городка", spawn: { x: 728, y: 303, coverY: 337, civilian: false } },
-  { id: "tavern", title: "Внутри салуна", spawn: { x: 866, y: 218, coverY: 249, civilian: false } },
+  { id: "street", title: "Улица городка", spawn: { x: 607, y: 333.5, coverY: 367.00662, civilian: false } },
+  { id: "tavern", title: "Внутри салуна", spawn: { x: 600, y: 320, coverY: 351.8336, civilian: false } },
 ] as const;
 async function shot(page: Page, x: number, y: number) {
   const canvas = await page.locator("canvas").boundingBox();
@@ -46,7 +46,7 @@ test("location selection persists, keeps progress and releases old scenery when 
       };
     });
     textures ||= state.textures;
-    expect(state).toEqual({ map, textures, layers: map === "tavern" ? 2 : 7, backgrounds: 1, key: map === "tavern" ? "tavern" : map === "street" ? "street-dusk" : "town-scenery" });
+    expect(state).toEqual({ map, textures, layers: map === "tavern" ? 4 : map === "street" ? 9 : 7, backgrounds: 1, key: map === "tavern" ? "tavern" : map === "street" ? "street-dusk" : "town-scenery" });
     await page.getByRole("button", { name: "← Уровни" }).click();
   }
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("lastshot-progress")!))).toEqual({ unlocked: 5, best: [200, 400] });
@@ -128,7 +128,7 @@ for (const location of locations) {
 }
 
 for (const location of locations) {
-  test(`all six ${location.id} positions use matching rendered sizes, hit areas and civilian penalties`, async ({ page }) => {
+  test(`all eight ${location.id} positions use matching rendered sizes, hit areas and civilian penalties`, async ({ page }) => {
     await unlock(page);
     await page.goto("/");
     await mapButton[location.id](page).click();
@@ -147,12 +147,18 @@ for (const location of locations) {
     for (const position of positions) expect(position.rendered).toBe(position.scale);
     await page.screenshot({ path: `test-results/${location.id}-all-targets.png`, fullPage: true });
     await page.getByRole("button", { name: "Продолжить", exact: true }).click();
-    for (const position of positions) await shot(page, position.x, position.y);
+    for (const [i, position] of positions.entries()) {
+      if (i === 6) {
+        await page.getByRole("button", { name: /Перезарядить/ }).click();
+        await expect(page.locator("#stats")).toContainText("Патроны 6/6");
+      }
+      await shot(page, position.x, position.y);
+    }
     expect(await page.evaluate(async () => {
       const { game } = await import("/src/main.ts");
       const scene = game.scene.getScene("town") as any;
       return { kills: scene.kills, lives: scene.lives, ammo: scene.ammo, remaining: scene.targets.length };
-    })).toEqual({ kills: 5, lives: 2, ammo: 0, remaining: 0 });
+    })).toEqual({ kills: 7, lives: 2, ammo: 4, remaining: 0 });
   });
 
   test(`offline touch selection and ${location.id} fit narrow screens and rotation without storage`, async ({ browser }) => {
