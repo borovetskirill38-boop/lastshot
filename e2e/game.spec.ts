@@ -1,4 +1,4 @@
-import { skipIntro } from "./helpers";
+import { skipIntro, setBossRandom } from "./helpers";
 import { test, expect, Page } from "@playwright/test";
 async function scene<T>(page: Page, fn: string): Promise<T> {
   return page.evaluate(async (source) => {
@@ -116,7 +116,8 @@ test("boss takes six hits and campaign completes", async ({ page }) => {
   );
   await page.goto("/");
   await expect(page.locator("canvas")).toBeAttached();
-  await page.getByRole("button", { name: /Шериф против главаря/ }).click();
+  await page.getByRole("button", { name: /Шериф Картер против Билли Пули/ }).click();
+  await setBossRandom(page, [0.1, 0.9, 0.9, 0.1, 0.1, 0.9]);
   await skipIntro(page);
   await expect.poll(() => scene(page, "s=>s.bossOpen")).toBe(true);
   for (let i = 0; i < 6; i++) {
@@ -130,6 +131,7 @@ test("boss takes six hits and campaign completes", async ({ page }) => {
   await expect(page.locator("#result-title")).toHaveText("Город свободен!");
   await expect(page.locator("#next")).toBeHidden();
   await page.getByRole("button", { name: "Ещё раз" }).click();
+  await setBossRandom(page, [0.9]);
   await skipIntro(page);
   await expect.poll(() => scene(page, "s=>s.bossOpen")).toBe(true);
   expect(await scene(page, "s=>s.bossHP")).toBe(6);

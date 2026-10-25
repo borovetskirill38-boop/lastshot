@@ -100,17 +100,17 @@ aligns to that side. On narrow screens both portraits sit above the speech box,
 keeping their left/right order. Reduced motion removes the highlight transition.
 No gameplay sprites, spawn rules or weapon effects depend on these portraits.
 
-## Boss and Anna
+## Billy Bullet and Suzzie
 
 - `boss-encounter.webp`: original AI-generated transparent 2172×724 atlas,
   quality 94 WebP. Three equal cells: the boss alone, the same boss restraining
-  Anna in front of himself, and Anna alone. His gray beard, scar, silver hat band,
-  burgundy waistcoat and red cravat match across both poses. Anna is an adult
+  Suzzie in front of himself, and Suzzie alone. His gray beard, scar, silver hat band,
+  burgundy waistcoat and red cravat match across both poses. Suzzie is an adult
   frontier saloon waitress, wearing a modest high-neck cream blouse, green
   waistcoat, apron and pinned brown hair. The pair is unharmed and non-graphic.
 
 The first cell is used verbatim both for the boss conversation portrait and his
-combat sprite; the third similarly serves Anna's dialogue and rescued appearance.
+combat sprite; the third similarly serves Suzzie's dialogue and rescued appearance.
 The middle cell is the protected hostage pose. Sprites preserve cell proportions,
 share one Phaser texture, and use each cover's scale and foreground mask. CSS uses
 the same embedded image for dialogue frames. The old boss cell in `people.webp`

@@ -168,7 +168,7 @@ test("hits route to the right material and reload audio pauses, resumes and canc
   await expect(page.locator("#sound")).toHaveText("Звук: выкл.");
   expect((await state()).active).toBe(0);
   await page.getByRole("button", { name: "← Уровни" }).click();
-  await page.getByRole("button", { name: /Шериф против главаря/ }).click();
+  await page.getByRole("button", { name: /Шериф Картер против Билли Пули/ }).click();
   await skipIntro(page);
   await expect
     .poll(() =>

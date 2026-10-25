@@ -41,7 +41,29 @@ test("hostage phase blocks every part of the pair, preserves HP and allows safe 
   assert.equal(boss.hp, 6);
 });
 
-test("only exposed hits damage the boss; one wound causes retreat and six wounds rescue Anna", () => {
+test("each appearance rolls its own pose, allowing either first pose and consecutive repeats", () => {
+  for (const map of maps) {
+    const rolls = [0.8, 0.5, 0.1, 0.49, 0.9, 0];
+    const randomValues = rolls.flatMap((roll) => [0.35, roll]);
+    const boss = new BossEncounter(map.slots, 0, () => {
+      assert.ok(randomValues.length > 0);
+      return randomValues.shift();
+    });
+    const phases = [];
+    for (const roll of rolls) {
+      const appearedAt = boss.nextAt;
+      assert.equal(boss.tick(appearedAt), "appeared");
+      phases.push(boss.phase);
+      assert.equal(boss.nextAt, appearedAt + bossTiming[boss.phase]);
+      assert.equal(boss.phase, roll < 0.5 ? "hostage" : "exposed");
+      assert.equal(boss.tick(boss.nextAt), roll < 0.5 ? "retreated" : "attack");
+    }
+    assert.deepEqual(phases, ["exposed", "exposed", "hostage", "hostage", "exposed", "hostage"]);
+    assert.equal(randomValues.length, 0);
+  }
+});
+
+test("only exposed hits damage the boss; one wound causes retreat and six wounds rescue Suzzie", () => {
   for (const map of maps) {
     const boss = new BossEncounter(map.slots, 0, () => 0.6);
     assert.equal(boss.fire(boss.position.x, boss.position.y, 0), "miss");
@@ -60,7 +82,7 @@ test("only exposed hits damage the boss; one wound causes retreat and six wounds
 });
 
 test("missing an exposed attack window costs one life event; a delayed frame cannot stack attacks", () => {
-  const boss = new BossEncounter(maps[0].slots);
+  const boss = new BossEncounter(maps[0].slots, 0, () => 0.6);
   expose(boss);
   assert.equal(boss.tick(boss.nextAt - 1), null);
   assert.equal(boss.tick(boss.nextAt + 10000), "attack");

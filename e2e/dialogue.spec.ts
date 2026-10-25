@@ -2,7 +2,7 @@ import { test, expect, Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { skipIntro } from "./helpers";
 
-const modes = ["Первый выстрел", "Мирные жители", "Быстрая рука", "Шесть патронов", "Шериф против главаря"];
+const modes = ["Первый выстрел", "Мирные жители", "Быстрая рука", "Шесть патронов", "Шериф Картер против Билли Пули"];
 const locations = [
   ["saloon", "Салун Полдень", "Салун"],
   ["street", "Улица городка Лёгкие сумерки", "Улица городка"],
@@ -19,6 +19,7 @@ async function state(page: Page) {
       intro: scene.intro, ended: scene.ended, paused: scene.paused, reloading: scene.reloading,
       clock: scene.clock, ammo: scene.ammo, lives: scene.lives, targets: scene.targets.length,
       boss: scene.bossOpen, shells: scene.weapon.shells.length,
+      bossPhase: scene.encounter.phase,
     };
   });
 }
@@ -44,20 +45,20 @@ for (const [mapId, mapButton, mapName] of locations) {
       await page.getByRole("button", { name: new RegExp(name) }).click();
       await expect(page.getByRole("dialog", { name: "Перед перестрелкой" })).toBeVisible();
       await expect(page.locator("#dialogue-context")).toHaveText(`${mapName} · ${name}`);
-      const enemy = level === 4 ? "Главарь" : "Бандит";
-      await expect(page.getByRole("img", { name: "Портрет шерифа", exact: true })).toBeVisible();
-      await expect(page.getByRole("img", { name: level === 4 ? "Портрет главаря" : "Портрет бандита", exact: true })).toBeVisible();
+      const enemy = level === 4 ? "Билли Пуля" : "Бандит";
+      await expect(page.getByRole("img", { name: "Портрет шерифа Картера", exact: true })).toBeVisible();
+      await expect(page.getByRole("img", { name: level === 4 ? "Портрет Билли Пули" : "Портрет бандита", exact: true })).toBeVisible();
       await expect(page.locator("#dialogue-enemy-name")).toHaveText(enemy);
       let heroBubble = 0;
-      const speakers = level === 4 ? ["Шериф", enemy, "Анна", "Шериф", enemy, "Анна", "Шериф"]
-        : ["Шериф", enemy, "Шериф", enemy];
+      const speakers = level === 4 ? ["Шериф Картер", enemy, "Сьюззи", "Шериф Картер", enemy, "Сьюззи", "Шериф Картер"]
+        : ["Шериф Картер", enemy, "Шериф Картер", enemy];
       for (const [index, speaker] of speakers.entries()) {
-        const hero = speaker === "Шериф";
+        const hero = speaker === "Шериф Картер";
         await expect(page.locator("#dialogue-progress")).toHaveText(`${index + 1} / ${speakers.length}`);
         await expect(page.locator("#dialogue-speaker")).toHaveText(speaker);
         await expect(page.locator("#dialogue-hero")).toHaveAttribute("aria-current", String(hero));
         await expect(page.locator("#dialogue-enemy")).toHaveAttribute("aria-current", String(!hero));
-        if (speaker === "Анна") await expect(page.getByRole("img", { name: "Портрет Анны, официантки", exact: true })).toBeVisible();
+        if (speaker === "Сьюззи") await expect(page.getByRole("img", { name: "Портрет Сьюззи, официантки", exact: true })).toBeVisible();
         const layout = await placement(page);
         expect(layout.heroRight).toBeLessThan(layout.enemyLeft);
         if (index === 0) heroBubble = layout.speechLeft;
@@ -77,7 +78,7 @@ for (const [mapId, mapButton, mapName] of locations) {
       expect(ready).toMatchObject({ intro: false, ended: false, paused: false, reloading: false, ammo: 6, lives: 3, shells: 0 });
       await expect.poll(async () => {
         const current = await state(page);
-        return current.boss || current.targets > 0;
+        return current.bossPhase !== "hidden" || current.targets > 0;
       }).toBe(true);
       expect(errors).toEqual([]);
     });
@@ -211,7 +212,7 @@ test("offline touch dialogue fits narrow screens and rotation, then preserves th
 test("embedded portrait artwork decodes and the right portrait switches from boss back to bandit", async ({ page }) => {
   await unlock(page);
   await page.goto("/");
-  await page.getByRole("button", { name: /Шериф против главаря/ }).click();
+  await page.getByRole("button", { name: /Шериф Картер против Билли Пули/ }).click();
   await expect(page.locator("#intro-dialog")).toHaveAttribute("data-opponent", "boss");
   const portrait = await page.locator("#dialogue-enemy-portrait").evaluate(async (element) => {
     const style = getComputedStyle(element);
@@ -226,13 +227,13 @@ test("embedded portrait artwork decodes and the right portrait switches from bos
   expect(portrait.width / portrait.height).toBe(3);
   expect(portrait.position).toBe("0%");
   // A click on either portrait advances the conversation exactly once.
-  await page.getByRole("img", { name: "Портрет шерифа", exact: true }).click();
+  await page.getByRole("img", { name: "Портрет шерифа Картера", exact: true }).click();
   await expect(page.locator("#dialogue-progress")).toHaveText("2 / 7");
   await expect(page.locator("#dialogue-enemy")).toHaveAttribute("aria-current", "true");
   await page.screenshot({ path: "test-results/dialogue-boss.png", fullPage: true });
   await page.locator("#dialogue-next").click();
   await expect(page.locator("#dialogue-progress")).toHaveText("3 / 7");
-  await expect(page.getByRole("img", { name: "Портрет Анны, официантки", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Портрет Сьюззи, официантки", exact: true })).toBeVisible();
   await expect(page.locator("#dialogue-line")).toContainText("Помоги мне");
   expect(await page.locator("#dialogue-enemy-portrait").evaluate((element) => getComputedStyle(element).backgroundPositionX)).toBe("100%");
   await page.getByRole("button", { name: "← Выбор уровня", exact: true }).click();

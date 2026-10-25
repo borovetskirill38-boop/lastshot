@@ -60,7 +60,7 @@ for (const [width, height] of sizes) {
     await page.getByRole("button", { name: "Взять оружие", exact: true }).click();
     await page.getByRole("button", { name: "← Главное меню", exact: true }).click();
     const mode = width === 280 || width === 844
-      ? /Шериф против главаря/
+      ? /Шериф Картер против Билли Пули/
       : width === 320 ? /04.*Шесть патронов/
         : width === 768 ? /03.*Быстрая рука/ : /02.*Мирные жители/;
     await page.getByRole("button", { name: mode }).click();

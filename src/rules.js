@@ -28,7 +28,7 @@ export const levels = [
     civilians: 0.25,
   },
   {
-    name: "Шериф против главаря",
+    name: "Шериф Картер против Билли Пули",
     goal: 6,
     interval: 1600,
     lifetime: 1600,

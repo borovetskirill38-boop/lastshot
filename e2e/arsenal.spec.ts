@@ -94,7 +94,7 @@ test("hits, misses and civilian hits are counted once, ignore blocked shots and 
   await expect(page.locator("#weapon-hits")).toHaveText("0");
   await page.getByRole("button", { name: "Взять оружие", exact: true }).click();
   await back(page);
-  await page.getByRole("button", { name: /Шериф против главаря/ }).click();
+  await page.getByRole("button", { name: /Шериф Картер против Билли Пули/ }).click();
   await skipIntro(page);
   await page.evaluate(async () => {
     const { game } = await import("/src/main.ts");

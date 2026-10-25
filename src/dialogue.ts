@@ -61,10 +61,10 @@ export class IntroDialogue {
     this.dialog.dataset.speaker = line.speaker;
     if (line.speaker !== "hero") this.rightSpeaker = line.speaker;
     this.dialog.dataset.rightSpeaker = this.rightSpeaker;
-    const rightName = this.rightSpeaker === "hostage" ? "Анна" : this.rightSpeaker === "boss" ? "Главарь" : "Бандит";
+    const rightName = this.rightSpeaker === "hostage" ? "Сьюззи" : this.rightSpeaker === "boss" ? "Билли Пуля" : "Бандит";
     element("dialogue-enemy-name").textContent = rightName;
-    const portraitLabel = this.rightSpeaker === "hostage" ? "Портрет Анны, официантки"
-      : this.rightSpeaker === "boss" ? "Портрет главаря" : "Портрет бандита";
+    const portraitLabel = this.rightSpeaker === "hostage" ? "Портрет Сьюззи, официантки"
+      : this.rightSpeaker === "boss" ? "Портрет Билли Пули" : "Портрет бандита";
     element("dialogue-enemy-portrait").setAttribute("aria-label", portraitLabel);
     element("dialogue-hero").setAttribute("aria-current", String(line.speaker === "hero"));
     element("dialogue-enemy").setAttribute("aria-current", String(line.speaker !== "hero"));

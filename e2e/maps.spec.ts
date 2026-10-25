@@ -57,7 +57,7 @@ test("location selection persists, keeps progress and releases old scenery when 
 });
 
 for (const location of locations) {
-  for (const mode of ["Первый выстрел", "Мирные жители", "Быстрая рука", "Шесть патронов", "Шериф против главаря"]) {
+  for (const mode of ["Первый выстрел", "Мирные жители", "Быстрая рука", "Шесть патронов", "Шериф Картер против Билли Пули"]) {
     test(`${location.id} supports ${mode}, native shots and cover`, async ({ page }) => {
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
@@ -69,7 +69,7 @@ for (const location of locations) {
       await page.getByRole("button", { name: new RegExp(mode) }).click();
       await skipIntro(page);
       await expect(page.locator("#level-name")).toContainText(location.title);
-      if (mode === "Шериф против главаря") {
+      if (mode === "Шериф Картер против Билли Пули") {
         test.setTimeout(45000);
         const positions = new Set<string>();
         for (let hit = 0; hit < 6; hit++) {
@@ -95,7 +95,7 @@ for (const location of locations) {
         }
         expect(positions.size).toBeGreaterThan(1);
         await expect(page.locator("#result-title")).toHaveText("Город свободен!");
-        await expect(page.locator("#result-text")).toContainText("Анна спасена");
+        await expect(page.locator("#result-text")).toContainText("Сьюззи спасена");
         await page.getByRole("button", { name: "Ещё раз", exact: true }).click();
         await skipIntro(page);
         await expect(page.locator("#level-name")).toContainText(location.title);

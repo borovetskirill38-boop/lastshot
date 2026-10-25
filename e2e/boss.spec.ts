@@ -1,7 +1,7 @@
 import { test, expect, Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { maps } from "../src/maps.js";
-import { skipIntro } from "./helpers";
+import { skipIntro, setBossRandom } from "./helpers";
 
 async function snapshot(page: Page) {
   return page.evaluate(async () => {
@@ -22,8 +22,32 @@ async function openBoss(page: Page, mapId: string) {
   await page.addInitScript(() => localStorage.setItem("lastshot-progress", JSON.stringify({ unlocked: 5, best: [] })));
   await page.goto("/");
   await page.locator(`.map-card[data-map="${mapId}"]`).click();
-  await page.getByRole("button", { name: /Шериф против главаря/ }).click();
+  await page.getByRole("button", { name: /Шериф Картер против Билли Пули/ }).click();
+  await setBossRandom(page, [0.1, 0.9]);
 }
+
+test("Billy can appear alone first and repeat either pose without alternating", async ({ page }) => {
+  await openBoss(page, "saloon");
+  await setBossRandom(page, [0.8, 0.9, 0.1, 0.2, 0.8]);
+  await skipIntro(page);
+  for (let hit = 1; hit <= 2; hit++) {
+    await expect.poll(async () => (await snapshot(page)).phase, { intervals: [50] }).toBe("exposed");
+    await expect(page.locator("#boss-notice")).toContainText("Билли Пуля");
+    const { position } = await snapshot(page);
+    await shoot(page, position.x, position.y);
+    expect(await snapshot(page)).toMatchObject({ phase: "hidden", hp: 6 - hit, lives: 3 });
+  }
+  for (let i = 0; i < 2; i++) {
+    await expect.poll(async () => (await snapshot(page)).phase, { intervals: [50] }).toBe("hostage");
+    await expect(page.locator("#boss-notice")).toContainText("Сьюззи в плену");
+    await expect.poll(async () => (await snapshot(page)).phase, { intervals: [50] }).toBe("hidden");
+    expect(await snapshot(page)).toMatchObject({ hp: 4, lives: 3 });
+  }
+  await expect.poll(async () => (await snapshot(page)).phase, { intervals: [50] }).toBe("exposed");
+  const { position } = await snapshot(page);
+  await shoot(page, position.x, position.y);
+  expect(await snapshot(page)).toMatchObject({ phase: "hidden", hp: 3, lives: 3 });
+});
 
 for (const map of maps) {
   test(`hostage hits are penalized, waiting is safe, and the boss moves on ${map.id}`, async ({ page }) => {
@@ -46,7 +70,7 @@ for (const map of maps) {
     await page.getByRole("button", { name: "Продолжить", exact: true }).click();
     const p = before.position;
     await shoot(page, p.x - 25 * p.scale, p.y - 30 * p.scale); // Even the boss's side is protected.
-    await shoot(page, p.x + 20 * p.scale, p.y - 20 * p.scale); // Anna is visibly in front.
+    await shoot(page, p.x + 20 * p.scale, p.y - 20 * p.scale); // Suzzie is visibly in front.
     expect(await snapshot(page)).toMatchObject({ hp: 6, lives: 1, ammo: 4, score: 0, kills: 0 });
     await expect.poll(async () => (await snapshot(page)).phase, { timeout: 6000 }).toBe("exposed");
     const exposed = await snapshot(page);
@@ -89,7 +113,7 @@ test("three shield hits end the fight without damaging the boss or counting extr
   expect(stats).toEqual({ hits: 3, misses: 0, civilianHits: 3 });
 });
 
-test("the boss encounter, Anna dialogue and touch penalties work offline after rotation", async ({ browser }) => {
+test("the boss encounter, Suzzie dialogue and touch penalties work offline after rotation", async ({ browser }) => {
   const context = await browser.newContext({ offline: true, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await context.newPage();
   const errors: string[] = [], requests: string[] = [];
@@ -101,14 +125,14 @@ test("the boss encounter, Anna dialogue and touch penalties work offline after r
       getItem: (key: string) => values.get(key) ?? null,
       setItem: (key: string, value: string) => values.set(key, value),
     } });
-    Math.random = () => 0;
+    Math.random = () => (window as any).exposeBoss ? 0.99 : 0;
   });
   await page.setContent(await readFile("lastshot.html", "utf8"));
   await page.locator('.map-card[data-map="tavern"]').tap();
-  await page.getByRole("button", { name: /Шериф против главаря/ }).tap();
+  await page.getByRole("button", { name: /Шериф Картер против Билли Пули/ }).tap();
   await page.locator("#dialogue-next").tap();
   await page.locator("#dialogue-next").tap();
-  await expect(page.getByRole("img", { name: "Портрет Анны, официантки", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Портрет Сьюззи, официантки", exact: true })).toBeVisible();
   await expect(page.locator("#dialogue-line")).toContainText("Помоги мне");
   await skipIntro(page, true);
   await expect(page.locator("#boss-notice")).toHaveAttribute("data-phase", "hostage");
@@ -122,8 +146,10 @@ test("the boss encounter, Anna dialogue and touch penalties work offline after r
   await expect(page.locator("#life-count")).toHaveText("2/3");
   await expect(page.locator("#boss-notice")).toContainText("6/6");
   await expect(page.locator("#stats")).toContainText("Патроны 5/6");
+  // Future appearances use fresh rolls rather than the previous pose.
+  await page.evaluate(() => { (window as any).exposeBoss = true; });
   await expect(page.locator("#boss-notice")).toHaveAttribute("data-phase", "exposed");
-  await shoot(page, tavern.slots[1].x, tavern.slots[1].y, true);
+  await shoot(page, tavern.slots.at(-1)!.x, tavern.slots.at(-1)!.y, true);
   await expect(page.locator("#boss-notice")).toContainText("5/6");
   await expect(page.locator("#life-count")).toHaveText("2/3");
   expect(requests).toEqual([]);

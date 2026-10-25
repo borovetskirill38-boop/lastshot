@@ -8,7 +8,6 @@ export class BossEncounter {
   phase = "hidden";
   hp = 6;
   index = -1;
-  nextHostage = true;
   remaining = [];
 
   constructor(positions, now = 0, random = Math.random) {
@@ -29,8 +28,8 @@ export class BossEncounter {
       this.index = choices[Math.floor(fraction * choices.length)] ?? 0;
       this.remaining = this.remaining.filter((i) => i !== this.index);
       this.position = this.positions[this.index];
-      this.phase = this.nextHostage ? "hostage" : "exposed";
-      this.nextHostage = !this.nextHostage;
+      // A separate roll on every appearance allows either pose to repeat.
+      this.phase = this.random() < 0.5 ? "hostage" : "exposed";
       this.nextAt = now + bossTiming[this.phase];
       return "appeared";
     }
