@@ -22,6 +22,16 @@ async function state(page: Page) {
     };
   });
 }
+async function placement(page: Page) {
+  return page.evaluate(() => {
+    const hero = document.getElementById("dialogue-hero")!.getBoundingClientRect();
+    const enemy = document.getElementById("dialogue-enemy")!.getBoundingClientRect();
+    const speech = document.querySelector(".dialogue-speech")!.getBoundingClientRect();
+    return { heroLeft: hero.left, heroRight: hero.right, heroBottom: hero.bottom,
+      enemyLeft: enemy.left, enemyRight: enemy.right, enemyBottom: enemy.bottom,
+      speechLeft: speech.left, speechTop: speech.top };
+  });
+}
 
 for (const [mapId, mapButton, mapName] of locations) {
   for (const [level, name] of modes.entries()) {
@@ -35,9 +45,20 @@ for (const [mapId, mapButton, mapName] of locations) {
       await expect(page.getByRole("dialog", { name: "Перед перестрелкой" })).toBeVisible();
       await expect(page.locator("#dialogue-context")).toHaveText(`${mapName} · ${name}`);
       const enemy = level === 4 ? "Главарь" : "Бандит";
+      await expect(page.getByRole("img", { name: "Портрет шерифа", exact: true })).toBeVisible();
+      await expect(page.getByRole("img", { name: level === 4 ? "Портрет главаря" : "Портрет бандита", exact: true })).toBeVisible();
+      await expect(page.locator("#dialogue-enemy-name")).toHaveText(enemy);
+      let heroBubble = 0;
       for (const [index, speaker] of ["Шериф", enemy, "Шериф", enemy].entries()) {
         await expect(page.locator("#dialogue-progress")).toHaveText(`${index + 1} / 4`);
         await expect(page.locator("#dialogue-speaker")).toHaveText(speaker);
+        await expect(page.locator("#dialogue-hero")).toHaveAttribute("aria-current", String(index % 2 === 0));
+        await expect(page.locator("#dialogue-enemy")).toHaveAttribute("aria-current", String(index % 2 === 1));
+        const layout = await placement(page);
+        expect(layout.heroRight).toBeLessThan(layout.enemyLeft);
+        if (index === 0) heroBubble = layout.speechLeft;
+        if (index % 2) expect(layout.speechLeft).toBeGreaterThan(heroBubble + 8);
+        else expect(layout.speechLeft).toBeCloseTo(heroBubble, 0);
         expect((await state(page)).intro).toBe(true);
         if (index === 3) {
           await expect(page.locator("#dialogue-next")).toHaveText("Начать перестрелку");
@@ -155,6 +176,14 @@ test("offline touch dialogue fits narrow screens and rotation, then preserves th
   for (const [width, height] of [[280, 653], [320, 568], [390, 844], [844, 390], [1024, 768], [480, 240]]) {
     await page.setViewportSize({ width, height });
     expect(await page.locator("#intro-dialog").evaluate((dialog) => dialog.scrollWidth <= dialog.clientWidth)).toBe(true);
+    const layout = await placement(page);
+    expect(layout.heroLeft).toBeGreaterThanOrEqual(0);
+    expect(layout.heroRight).toBeLessThan(layout.enemyLeft);
+    expect(layout.enemyRight).toBeLessThanOrEqual(width);
+    if (width <= 650 && height > width) {
+      expect(layout.heroBottom).toBeLessThan(layout.speechTop);
+      expect(layout.enemyBottom).toBeLessThan(layout.speechTop);
+    }
     await page.locator("#dialogue-next").scrollIntoViewIfNeeded();
     const button = await page.locator("#dialogue-next").boundingBox();
     expect(button!.y).toBeGreaterThanOrEqual(0);
@@ -173,4 +202,34 @@ test("offline touch dialogue fits narrow screens and rotation, then preserves th
   expect(requests).toEqual([]);
   expect(errors).toEqual([]);
   await context.close();
+});
+
+test("embedded portrait artwork decodes and the right portrait switches from boss back to bandit", async ({ page }) => {
+  await unlock(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: /Шериф против главаря/ }).click();
+  await expect(page.locator("#intro-dialog")).toHaveAttribute("data-opponent", "boss");
+  const portrait = await page.locator("#dialogue-enemy-portrait").evaluate(async (element) => {
+    const style = getComputedStyle(element);
+    const image = new Image();
+    image.src = style.backgroundImage.slice(5, -2);
+    await image.decode();
+    return { width: image.naturalWidth, height: image.naturalHeight,
+      inline: image.src.startsWith("data:image/webp"), position: style.backgroundPositionX };
+  });
+  expect(portrait.inline).toBe(true);
+  expect(portrait.width).toBeGreaterThan(300);
+  expect(portrait.width / portrait.height).toBe(3);
+  expect(portrait.position).toBe("100%");
+  // A click on either portrait advances the conversation exactly once.
+  await page.getByRole("img", { name: "Портрет шерифа", exact: true }).click();
+  await expect(page.locator("#dialogue-progress")).toHaveText("2 / 4");
+  await expect(page.locator("#dialogue-enemy")).toHaveAttribute("aria-current", "true");
+  await page.screenshot({ path: "test-results/dialogue-boss.png", fullPage: true });
+  await page.getByRole("button", { name: "← Выбор уровня", exact: true }).click();
+  await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
+  await expect(page.locator("#intro-dialog")).toHaveAttribute("data-opponent", "bandit");
+  await expect(page.getByRole("img", { name: "Портрет бандита", exact: true })).toBeVisible();
+  expect(await page.locator("#dialogue-enemy-portrait").evaluate((element) => getComputedStyle(element).backgroundPositionX)).toBe("50%");
+  await expect(page.locator("#dialogue-hero")).toHaveAttribute("aria-current", "true");
 });

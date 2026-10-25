@@ -84,3 +84,18 @@ perspective. The foreground texture is created once on the first interior visit;
 subsequent visits reuse it. Only two scenery images are needed for the room.
 Emergence uses the existing pause-safe gameplay clock. All assets remain embedded
 in the standalone HTML, including the selector preview and menu background.
+
+## Conversation portraits
+
+- `dialogue-portraits.webp`: original AI-generated transparent 2172×724 atlas,
+  quality 92 WebP. Three equal square cells: the player sheriff with a brass star
+  and light hat, a mustached bandit with a red neckerchief, and the older gang boss
+  with gray beard, cheek scar and silver hat band. The sheriff faces right and
+  both opponents face left, toward the other participant.
+
+CSS reuses one inline image for both portrait frames. The left frame always shows
+the sheriff; the right frame switches between bandit and boss for the selected
+level, including on replay. The active speaker is highlighted and its speech box
+aligns to that side. On narrow screens both portraits sit above the speech box,
+keeping their left/right order. Reduced motion removes the highlight transition.
+No gameplay sprites, spawn rules or weapon effects depend on these portraits.

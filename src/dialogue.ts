@@ -37,6 +37,10 @@ export class IntroDialogue {
     this.index = 0;
     this.complete = complete;
     this.cancelled = cancelled;
+    const boss = lines.some((line) => line.speaker === "boss");
+    this.dialog.dataset.opponent = boss ? "boss" : "bandit";
+    element("dialogue-enemy-name").textContent = boss ? "Главарь" : "Бандит";
+    element("dialogue-enemy-portrait").setAttribute("aria-label", boss ? "Портрет главаря" : "Портрет бандита");
     element("dialogue-context").textContent = context;
     this.render();
     document.body.classList.add("in-dialogue");
@@ -55,6 +59,8 @@ export class IntroDialogue {
   private render() {
     const line = this.lines[this.index];
     this.dialog.dataset.speaker = line.speaker;
+    element("dialogue-hero").setAttribute("aria-current", String(line.speaker === "hero"));
+    element("dialogue-enemy").setAttribute("aria-current", String(line.speaker !== "hero"));
     element("dialogue-speaker").textContent = line.name;
     element("dialogue-line").textContent = line.text;
     element("dialogue-progress").textContent = `${this.index + 1} / ${this.lines.length}`;

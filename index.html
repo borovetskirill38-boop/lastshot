@@ -181,9 +181,21 @@
         <article class="dialogue-card">
           <p id="dialogue-context" class="eyebrow"></p>
           <h2 id="dialogue-title">Перед перестрелкой</h2>
-          <div class="dialogue-speech" aria-live="polite" aria-atomic="true">
-            <p id="dialogue-speaker"></p>
-            <p id="dialogue-line"></p>
+          <div class="dialogue-stage">
+            <figure id="dialogue-hero" class="dialogue-actor dialogue-hero" aria-current="true">
+              <div class="dialogue-portrait" role="img" aria-label="Портрет шерифа"></div>
+              <figcaption>Шериф</figcaption>
+            </figure>
+            <div class="dialogue-lane">
+              <div class="dialogue-speech" aria-live="polite" aria-atomic="true">
+                <p id="dialogue-speaker"></p>
+                <p id="dialogue-line"></p>
+              </div>
+            </div>
+            <figure id="dialogue-enemy" class="dialogue-actor dialogue-enemy" aria-current="false">
+              <div id="dialogue-enemy-portrait" class="dialogue-portrait" role="img" aria-label="Портрет бандита"></div>
+              <figcaption id="dialogue-enemy-name">Бандит</figcaption>
+            </figure>
           </div>
           <div class="dialogue-bottomline">
             <p class="dialogue-hint">Клик или касание — следующая реплика</p>
