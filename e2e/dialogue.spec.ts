@@ -35,7 +35,7 @@ async function placement(page: Page) {
 
 for (const [mapId, mapButton, mapName] of locations) {
   for (const [level, name] of modes.entries()) {
-    test(`four clickable lines precede ${name} on ${mapId}`, async ({ page }) => {
+    test(`character dialogue precedes ${name} on ${mapId}`, async ({ page }) => {
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
       await unlock(page);
@@ -49,18 +49,22 @@ for (const [mapId, mapButton, mapName] of locations) {
       await expect(page.getByRole("img", { name: level === 4 ? "Портрет главаря" : "Портрет бандита", exact: true })).toBeVisible();
       await expect(page.locator("#dialogue-enemy-name")).toHaveText(enemy);
       let heroBubble = 0;
-      for (const [index, speaker] of ["Шериф", enemy, "Шериф", enemy].entries()) {
-        await expect(page.locator("#dialogue-progress")).toHaveText(`${index + 1} / 4`);
+      const speakers = level === 4 ? ["Шериф", enemy, "Анна", "Шериф", enemy, "Анна", "Шериф"]
+        : ["Шериф", enemy, "Шериф", enemy];
+      for (const [index, speaker] of speakers.entries()) {
+        const hero = speaker === "Шериф";
+        await expect(page.locator("#dialogue-progress")).toHaveText(`${index + 1} / ${speakers.length}`);
         await expect(page.locator("#dialogue-speaker")).toHaveText(speaker);
-        await expect(page.locator("#dialogue-hero")).toHaveAttribute("aria-current", String(index % 2 === 0));
-        await expect(page.locator("#dialogue-enemy")).toHaveAttribute("aria-current", String(index % 2 === 1));
+        await expect(page.locator("#dialogue-hero")).toHaveAttribute("aria-current", String(hero));
+        await expect(page.locator("#dialogue-enemy")).toHaveAttribute("aria-current", String(!hero));
+        if (speaker === "Анна") await expect(page.getByRole("img", { name: "Портрет Анны, официантки", exact: true })).toBeVisible();
         const layout = await placement(page);
         expect(layout.heroRight).toBeLessThan(layout.enemyLeft);
         if (index === 0) heroBubble = layout.speechLeft;
-        if (index % 2) expect(layout.speechLeft).toBeGreaterThan(heroBubble + 8);
+        if (!hero) expect(layout.speechLeft).toBeGreaterThan(heroBubble + 8);
         else expect(layout.speechLeft).toBeCloseTo(heroBubble, 0);
         expect((await state(page)).intro).toBe(true);
-        if (index === 3) {
+        if (index === speakers.length - 1) {
           await expect(page.locator("#dialogue-next")).toHaveText("Начать перестрелку");
           // The full-screen conversation accepts a click outside the text card too.
           await page.mouse.click(4, 4);
@@ -220,12 +224,17 @@ test("embedded portrait artwork decodes and the right portrait switches from bos
   expect(portrait.inline).toBe(true);
   expect(portrait.width).toBeGreaterThan(300);
   expect(portrait.width / portrait.height).toBe(3);
-  expect(portrait.position).toBe("100%");
+  expect(portrait.position).toBe("0%");
   // A click on either portrait advances the conversation exactly once.
   await page.getByRole("img", { name: "Портрет шерифа", exact: true }).click();
-  await expect(page.locator("#dialogue-progress")).toHaveText("2 / 4");
+  await expect(page.locator("#dialogue-progress")).toHaveText("2 / 7");
   await expect(page.locator("#dialogue-enemy")).toHaveAttribute("aria-current", "true");
   await page.screenshot({ path: "test-results/dialogue-boss.png", fullPage: true });
+  await page.locator("#dialogue-next").click();
+  await expect(page.locator("#dialogue-progress")).toHaveText("3 / 7");
+  await expect(page.getByRole("img", { name: "Портрет Анны, официантки", exact: true })).toBeVisible();
+  await expect(page.locator("#dialogue-line")).toContainText("Помоги мне");
+  expect(await page.locator("#dialogue-enemy-portrait").evaluate((element) => getComputedStyle(element).backgroundPositionX)).toBe("100%");
   await page.getByRole("button", { name: "← Выбор уровня", exact: true }).click();
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
   await expect(page.locator("#intro-dialog")).toHaveAttribute("data-opponent", "bandit");

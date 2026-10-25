@@ -107,6 +107,7 @@ test("civilian costs life, pause freezes timers, misses and defeat", async ({
   expect(await scene(page, "s=>s.lives")).toBe(2);
 });
 test("boss takes six hits and campaign completes", async ({ page }) => {
+  test.setTimeout(45000);
   await page.addInitScript(() =>
     localStorage.setItem(
       "lastshot-progress",
@@ -120,9 +121,10 @@ test("boss takes six hits and campaign completes", async ({ page }) => {
   await expect.poll(() => scene(page, "s=>s.bossOpen")).toBe(true);
   for (let i = 0; i < 6; i++) {
     await expect
-      .poll(() => scene(page, "s=>s.bossOpen && s.nextSpawn-s.clock>500"))
+      .poll(() => scene(page, "s=>s.bossOpen && s.encounter.nextAt-s.clock>500"), { timeout: 6000 })
       .toBe(true);
-    await shoot(page, 480, 315);
+    const position = await scene<{ x: number; y: number }>(page, "s=>s.bossPosition");
+    await shoot(page, position.x, position.y);
     expect(await scene(page, "s=>s.bossHP")).toBe(5 - i);
   }
   await expect(page.locator("#result-title")).toHaveText("Город свободен!");

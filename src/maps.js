@@ -30,7 +30,6 @@ export const maps = [
       { x: 480, y: 405, scale: 1, coverY: 449 },
       { x: 730, y: 405, scale: 1, coverY: 449 },
     ],
-    boss: { x: 480, y: 315, scale: 1, coverY: 359 },
   },
   {
     id: "street",
@@ -47,7 +46,6 @@ export const maps = [
       { x: 871, y: 242, scale: 1, coverY: 288 },
       { x: 728, y: 303, scale: 1.06, coverY: 337 },
     ],
-    boss: { x: 528, y: 249, scale: 1.1, coverY: 282 },
   },
   {
     id: "tavern",
@@ -64,7 +62,6 @@ export const maps = [
       { x: 697, y: 202, scale: 0.9, coverY: 234, coverProfile: tavernBar },
       { x: 866, y: 218, scale: 1.02, coverY: 249, coverProfile: tavernBar },
     ],
-    boss: { x: 770, y: 211, scale: 1.05, coverY: 239, coverProfile: tavernBar },
   },
 ];
 
@@ -90,7 +87,7 @@ export function coverTopAt(x, target) {
 export function hitsTarget(x, y, target) {
   const scale = target.scale ?? 1;
   return Number.isFinite(x) && Number.isFinite(y)
-    && Math.abs(x - target.x) <= 40 * scale
+    && Math.abs(x - target.x) <= (target.hitHalfWidth ?? 40) * scale
     && y >= target.y - 56 * scale
     && y <= Math.min(target.y + 43 * scale, coverTopAt(x, target) - 1);
 }

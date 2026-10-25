@@ -94,8 +94,25 @@ in the standalone HTML, including the selector preview and menu background.
   both opponents face left, toward the other participant.
 
 CSS reuses one inline image for both portrait frames. The left frame always shows
-the sheriff; the right frame switches between bandit and boss for the selected
-level, including on replay. The active speaker is highlighted and its speech box
+the sheriff; normal levels use the middle bandit cell. Boss encounters now use the
+shared boss/hostage atlas below instead of the legacy third portrait. The active speaker is highlighted and its speech box
 aligns to that side. On narrow screens both portraits sit above the speech box,
 keeping their left/right order. Reduced motion removes the highlight transition.
 No gameplay sprites, spawn rules or weapon effects depend on these portraits.
+
+## Boss and Anna
+
+- `boss-encounter.webp`: original AI-generated transparent 2172×724 atlas,
+  quality 94 WebP. Three equal cells: the boss alone, the same boss restraining
+  Anna in front of himself, and Anna alone. His gray beard, scar, silver hat band,
+  burgundy waistcoat and red cravat match across both poses. Anna is an adult
+  frontier saloon waitress, wearing a modest high-neck cream blouse, green
+  waistcoat, apron and pinned brown hair. The pair is unharmed and non-graphic.
+
+The first cell is used verbatim both for the boss conversation portrait and his
+combat sprite; the third similarly serves Anna's dialogue and rescued appearance.
+The middle cell is the protected hostage pose. Sprites preserve cell proportions,
+share one Phaser texture, and use each cover's scale and foreground mask. CSS uses
+the same embedded image for dialogue frames. The old boss cell in `people.webp`
+is no longer used in combat. Position changes, phases and pause all use game time;
+no new image is created at each appearance. All assets work in the standalone HTML.

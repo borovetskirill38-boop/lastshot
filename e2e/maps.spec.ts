@@ -46,7 +46,7 @@ test("location selection persists, keeps progress and releases old scenery when 
       };
     });
     textures ||= state.textures;
-    expect(state).toEqual({ map, textures, layers: map === "tavern" ? 2 : map === "street" ? 8 : 7, backgrounds: 1, key: map === "tavern" ? "tavern" : map === "street" ? "street-dusk" : "town-scenery" });
+    expect(state).toEqual({ map, textures, layers: map === "tavern" ? 2 : 7, backgrounds: 1, key: map === "tavern" ? "tavern" : map === "street" ? "street-dusk" : "town-scenery" });
     await page.getByRole("button", { name: "← Уровни" }).click();
   }
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("lastshot-progress")!))).toEqual({ unlocked: 5, best: [200, 400] });
@@ -70,25 +70,32 @@ for (const location of locations) {
       await skipIntro(page);
       await expect(page.locator("#level-name")).toContainText(location.title);
       if (mode === "Шериф против главаря") {
-        await expect.poll(() => page.evaluate(async () => {
-          const { game } = await import("/src/main.ts");
-          return (game.scene.getScene("town") as any).bossOpen;
-        })).toBe(true);
-        const boss = await page.evaluate(async () => {
-          const { game } = await import("/src/main.ts");
-          const scene = game.scene.getScene("town") as any;
-          scene.nextSpawn = Infinity;
-          return scene.map.boss;
-        });
-        expect(boss.x).not.toBe(480);
-        // One covered shot must leave boss HP intact.
-        await shot(page, boss.x, boss.coverY + 2);
-        await expect(page.locator("#stats")).toContainText("0/6");
-        for (let i = 0; i < 5; i++) await shot(page, boss.x, boss.y);
-        await page.getByRole("button", { name: /Перезарядить/ }).click();
-        await expect(page.locator("#stats")).toContainText("Патроны 6/6");
-        await shot(page, boss.x, boss.y);
+        test.setTimeout(45000);
+        const positions = new Set<string>();
+        for (let hit = 0; hit < 6; hit++) {
+          if (hit === 5) {
+            await page.getByRole("button", { name: /Перезарядить/ }).click();
+            await expect(page.locator("#stats")).toContainText("Патроны 6/6");
+          }
+          await expect.poll(() => page.evaluate(async () => {
+            const { game } = await import("/src/main.ts");
+            return (game.scene.getScene("town") as any).bossOpen;
+          }), { timeout: 6000 }).toBe(true);
+          const boss = await page.evaluate(async () => {
+            const { game } = await import("/src/main.ts");
+            return (game.scene.getScene("town") as any).bossPosition;
+          });
+          positions.add(`${boss.x},${boss.y}`);
+          if (hit === 0) {
+            // One covered shot must leave boss HP intact.
+            await shot(page, boss.x, boss.coverY + 2);
+            await expect(page.locator("#stats")).toContainText("0/6");
+          }
+          await shot(page, boss.x, boss.y);
+        }
+        expect(positions.size).toBeGreaterThan(1);
         await expect(page.locator("#result-title")).toHaveText("Город свободен!");
+        await expect(page.locator("#result-text")).toContainText("Анна спасена");
         await page.getByRole("button", { name: "Ещё раз", exact: true }).click();
         await skipIntro(page);
         await expect(page.locator("#level-name")).toContainText(location.title);

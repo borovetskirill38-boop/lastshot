@@ -9,6 +9,7 @@
   --street-map-texture: url("./visuals/street-dusk.webp?inline");
   --tavern-map-texture: url("./visuals/tavern.webp?inline");
   --dialogue-portraits: url("./visuals/dialogue-portraits.webp?inline");
+  --boss-encounter-art: url("./visuals/boss-encounter.webp?inline");
 }
 * {
   box-sizing: border-box;
@@ -812,6 +813,10 @@ body.in-arsenal #sound { background: #261c12e8; }
 #arsenal-feedback { font: 12px/1.5 Georgia, serif; color: #e8c58e; }
 #arsenal-save-note { font: 11px/1.7 Georgia, serif; color: #a68e6e; margin-bottom: 0; }
 .loadout-readout { margin: 0; padding: 8px 14px; background: #241e1c; color: #bd9d6a; text-align: left; font: 11px monospace; }
+.boss-mode .loadout-readout { display: grid; gap: 3px; line-height: 1.4; }
+#boss-notice { min-height: 2.8em; color: #e5c087; }
+#boss-notice[data-phase="hostage"] { color: #ffb399; font-weight: 700; }
+#boss-notice[data-phase="exposed"], #boss-notice[data-phase="defeated"] { color: #c2df9c; }
 @media (max-width: 900px) {
   .armory-layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
   .weapon-rack { padding: 14px; }
@@ -1066,10 +1071,12 @@ body.in-dialogue { overflow: hidden; }
   background: var(--dialogue-portraits) 0% center / 300% 100% no-repeat;
 }
 #dialogue-enemy-portrait { background-position-x: 50%; }
-#intro-dialog[data-opponent="boss"] #dialogue-enemy-portrait { background-position-x: 100%; }
+#intro-dialog[data-opponent="boss"] #dialogue-enemy-portrait { background-image: var(--boss-encounter-art); background-position-x: 0%; }
+#intro-dialog[data-right-speaker="hostage"] #dialogue-enemy-portrait { background-position-x: 100%; }
 .dialogue-actor figcaption { margin-top: 8px; color: #ebd1aa; font: 700 12px/1.5 monospace; text-align: center; overflow-wrap: anywhere; }
 .dialogue-actor[aria-current="true"] { opacity: 1; filter: none; border-color: #d9ad62; box-shadow: 0 0 22px #d49a4626, inset 0 0 18px #d49a4614; }
 .dialogue-enemy[aria-current="true"] { border-color: #bf6650; box-shadow: 0 0 22px #c2604026, inset 0 0 18px #c2604014; }
+#intro-dialog[data-right-speaker="hostage"] .dialogue-enemy[aria-current="true"] { border-color: #8dc6b5; box-shadow: 0 0 22px #8dc6b526; }
 .dialogue-lane { grid-column: 2; grid-row: 1; display: flex; align-items: center; min-width: 0; }
 .dialogue-speech {
   --speech-border: #d9ad62;
@@ -1090,6 +1097,8 @@ body.in-dialogue { overflow: hidden; }
 #intro-dialog:not([data-speaker="hero"]) .dialogue-speech { --speech-border: #bf6650; margin-right: 0; margin-left: auto; border-radius: 12px 4px 12px 12px; background: linear-gradient(225deg, #8c413324, transparent), #30231f; text-align: right; }
 #intro-dialog:not([data-speaker="hero"]) .dialogue-speech::before { left: auto; right: -10px; transform: scaleX(-1); }
 #intro-dialog:not([data-speaker="hero"]) #dialogue-speaker { color: #ee9f84; }
+#intro-dialog[data-speaker="hostage"] .dialogue-speech { --speech-border: #8dc6b5; background: linear-gradient(225deg, #43685b24, transparent), #25302a; }
+#intro-dialog[data-speaker="hostage"] #dialogue-speaker { color: #bee1d5; }
 .dialogue-bottomline { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
 .dialogue-hint { flex: 1 1 160px; margin: 0; color: #b9a084; font: 11px/1.6 monospace; }
 #dialogue-progress { color: #cbaa7d; font: 12px/1.5 monospace; white-space: nowrap; }

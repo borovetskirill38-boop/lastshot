@@ -7,6 +7,7 @@ export class IntroDialogue {
   private readonly next = element<HTMLButtonElement>("dialogue-next");
   private lines: Line[] = [];
   private index = 0;
+  private rightSpeaker = "bandit";
   private complete?: () => void;
   private cancelled?: () => void;
 
@@ -39,8 +40,7 @@ export class IntroDialogue {
     this.cancelled = cancelled;
     const boss = lines.some((line) => line.speaker === "boss");
     this.dialog.dataset.opponent = boss ? "boss" : "bandit";
-    element("dialogue-enemy-name").textContent = boss ? "Главарь" : "Бандит";
-    element("dialogue-enemy-portrait").setAttribute("aria-label", boss ? "Портрет главаря" : "Портрет бандита");
+    this.rightSpeaker = boss ? "boss" : "bandit";
     element("dialogue-context").textContent = context;
     this.render();
     document.body.classList.add("in-dialogue");
@@ -59,6 +59,13 @@ export class IntroDialogue {
   private render() {
     const line = this.lines[this.index];
     this.dialog.dataset.speaker = line.speaker;
+    if (line.speaker !== "hero") this.rightSpeaker = line.speaker;
+    this.dialog.dataset.rightSpeaker = this.rightSpeaker;
+    const rightName = this.rightSpeaker === "hostage" ? "Анна" : this.rightSpeaker === "boss" ? "Главарь" : "Бандит";
+    element("dialogue-enemy-name").textContent = rightName;
+    const portraitLabel = this.rightSpeaker === "hostage" ? "Портрет Анны, официантки"
+      : this.rightSpeaker === "boss" ? "Портрет главаря" : "Портрет бандита";
+    element("dialogue-enemy-portrait").setAttribute("aria-label", portraitLabel);
     element("dialogue-hero").setAttribute("aria-current", String(line.speaker === "hero"));
     element("dialogue-enemy").setAttribute("aria-current", String(line.speaker !== "hero"));
     element("dialogue-speaker").textContent = line.name;

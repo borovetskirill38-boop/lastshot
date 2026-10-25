@@ -185,11 +185,13 @@ test("hits route to the right material and reload audio pauses, resumes and canc
       events.push(kind);
     };
     const s = game.scene.getScene("town") as any;
-    s.shoot(480, 315);
+    const position = s.bossPosition;
+    s.shoot(position.x, position.y);
     const wounded = [...events];
-    s.bossHP = 1;
+    s.encounter.hp = 1;
+    s.encounter.phase = "exposed";
     events.length = 0;
-    s.shoot(480, 315);
+    s.shoot(position.x, position.y);
     return { wounded, fatal: [...events], ended: s.ended };
   });
   expect(boss.wounded).toEqual(["shot", "pain"]);

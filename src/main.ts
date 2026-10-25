@@ -5,8 +5,9 @@ import { Armory } from "./armory";
 import { observeGameLayout } from "./layout";
 import { IntroDialogue } from "./dialogue";
 import { getIntroDialogue } from "./dialogues.js";
+import { BossEncounter, bossTiming } from "./boss.js";
 import { hitsWood } from "./surfaces.js";
-import { preloadArt, drawTown, drawStreet, drawTavern, createPerson, ViewWeapon } from "./art";
+import { preloadArt, drawTown, drawStreet, drawTavern, createPerson, createBoss, ViewWeapon } from "./art";
 import { maps, readMap, hitsTarget } from "./maps.js";
 import { levels, readProgress, recordWin } from "./rules.js";
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
@@ -57,11 +58,11 @@ class Town extends Phaser.Scene {
   ended = true;
   nextSpawn = 0;
   reloadEnd = 0;
-  bossHP = 6;
-  bossOpen = false;
-  bossHit = false;
+  encounter = new BossEncounter(maps[0].slots);
+  get bossHP() { return this.encounter.hp; }
+  get bossOpen() { return this.encounter.phase === "exposed"; }
+  get bossPosition() { return this.encounter.position; }
   bossView?: Phaser.GameObjects.Container;
-  bossBar?: Phaser.GameObjects.Text;
   map = maps[0];
   slots = this.map.slots;
   scenery: Phaser.GameObjects.Image[] = [];
@@ -93,11 +94,11 @@ class Town extends Phaser.Scene {
     this.scenery = this.map.id === "saloon"
       ? drawTown(this, this.slots)
       : this.map.id === "street"
-        ? drawStreet(this, [...this.slots, this.map.boss])
+        ? drawStreet(this, this.slots)
         : drawTavern(this);
   }
   person(x: number, y: number, civilian: boolean, boss = false) {
-    const position = boss ? this.map.boss : this.slots.find((slot) => slot.x === x && slot.y === y);
+    const position = this.slots.find((slot) => slot.x === x && slot.y === y);
     return createPerson(this, x, y, civilian, boss, position?.scale ?? 1, this.map.tint);
   }
   begin() {
@@ -108,10 +109,7 @@ class Town extends Phaser.Scene {
     for (const t of this.targets) t.view.destroy();
     this.targets = [];
     this.bossView?.destroy();
-    this.bossBar?.destroy();
-    this.bossBar = undefined;
-    this.bossOpen = false;
-    this.bossHit = false;
+    this.bossView = undefined;
     if (this.map.id !== selectedMap.id) {
       this.map = selectedMap;
       this.slots = this.map.slots;
@@ -125,7 +123,7 @@ class Town extends Phaser.Scene {
     this.lives = 3;
     this.score = 0;
     this.kills = 0;
-    this.bossHP = 6;
+    this.encounter = new BossEncounter(this.slots, this.clock);
     this.reloading = false;
     this.paused = false;
     this.ended = false;
@@ -136,11 +134,14 @@ class Town extends Phaser.Scene {
     el<HTMLButtonElement>("pause").disabled = true;
     el<HTMLButtonElement>("reload").disabled = true;
     this.hud();
+    el("boss-notice").hidden = selected !== 4;
+    if (selected === 4) this.renderBoss();
   }
   startFight() {
     if (!this.intro || this.ended) return;
     this.intro = false;
     this.nextSpawn = this.clock + 700;
+    this.encounter.nextAt = this.clock + bossTiming.first;
     el<HTMLButtonElement>("pause").disabled = false;
     el<HTMLButtonElement>("reload").disabled = false;
     this.game.canvas.tabIndex = 0;
@@ -169,6 +170,20 @@ class Town extends Phaser.Scene {
         return heart;
       }),
     );
+  }
+  renderBoss() {
+    this.bossView?.destroy();
+    this.bossView = undefined;
+    const phase = this.encounter.phase;
+    const notice = el("boss-notice");
+    notice.dataset.phase = phase;
+    const action = phase === "hostage" ? "Анна в плену — НЕ СТРЕЛЯЙТЕ!"
+      : phase === "exposed" ? "Он открыт — стреляйте!" : "Меняет укрытие…";
+    notice.textContent = phase === "defeated" ? "Анна спасена!" : `Главарь ${this.bossHP}/6 · ${action}`;
+    if (phase === "hidden") return;
+    const p = this.bossPosition;
+    this.bossView = createBoss(this, p.x, p.y, p.scale, this.map.tint,
+      phase === "hostage" ? "shield" : phase === "defeated" ? "hostage" : "boss");
   }
   reload() {
     if (this.intro || this.ended || this.paused || this.reloading || this.ammo === this.capacity) return;
@@ -201,16 +216,22 @@ class Town extends Phaser.Scene {
       onComplete: () => flash.destroy(),
     });
     if (selected === 4) {
-      if (this.bossOpen && hitsTarget(x, y, this.map.boss)) {
+      const hit = this.encounter.fire(x, y, this.clock);
+      if (hit === "hostage") {
+        hitPerson = true;
+        outcome = "civilian";
+        this.lives--;
+        gameAudio.play("civilianDeath", pan);
+        el("boss-notice").textContent = `Анна перед ним! −1 жизнь · Главарь ${this.bossHP}/6`;
+        if (this.lives <= 0) this.finish(false);
+      } else if (hit === "hit" || hit === "defeated") {
         hitPerson = true;
         outcome = "enemy";
-        gameAudio.play(this.bossHP === 1 ? "bossDeath" : "pain", pan);
-        this.bossHP--;
-        this.bossHit = true;
+        gameAudio.play(hit === "defeated" ? "bossDeath" : "pain", pan);
         this.kills++;
         this.score += 100;
-        this.bossBar?.setText(`ГЛАВАРЬ  ${"♥".repeat(this.bossHP)}`);
-        if (!this.bossHP) this.finish(true);
+        this.renderBoss();
+        if (hit === "defeated") this.finish(true);
       }
     } else {
       const t = this.targets.find((target) => hitsTarget(x, y, target));
@@ -260,7 +281,7 @@ class Town extends Phaser.Scene {
         : "Город ждёт твоего возвращения";
     el("result-text").textContent = endlessRun
       ? `${this.score} очков · ${this.kills} бандитов. Три ошибки — и смена окончена. ${saved ? "Рекорд сохранён." : "Сохранение недоступно: рекорд действует до закрытия страницы."}`
-      : `${this.score} очков · ${this.kills} попаданий. ${win ? (saved ? "Прогресс сохранён." : "Сохранение недоступно: прогресс действует до закрытия страницы.") : "Попробуй снова: следи за патронами и береги жителей."}`;
+      : `${this.score} очков · ${this.kills} попаданий. ${win ? (saved ? "Прогресс сохранён." : "Сохранение недоступно: прогресс действует до закрытия страницы.") : "Попробуй снова: следи за патронами и береги жителей."}${win && selected === 4 ? " Анна спасена — вы снова вместе." : ""}`;
     el("retry").textContent = endlessRun ? "Начать заново" : "Ещё раз";
     el("choose").textContent = endlessRun ? "Главное меню" : "Выбор уровня";
     el("next").hidden = endlessRun || !win || selected === 4;
@@ -282,27 +303,14 @@ class Town extends Phaser.Scene {
       this.hud();
     }
     if (selected === 4) {
-      if (time >= this.nextSpawn) {
-        this.bossOpen = !this.bossOpen;
-        if (this.bossOpen) this.bossHit = false;
-        this.bossView?.destroy();
-        const boss = this.map.boss;
-        this.bossView = this.person(boss.x, boss.y, false, true);
-        this.bossView.setVisible(this.bossOpen);
-        this.bossBar ??= this.add
-          .text(boss.x, boss.y - 123, "ГЛАВАРЬ  ♥♥♥♥♥♥", {
-            fontSize: "23px",
-            color: "#ffdf99",
-            backgroundColor: "#402d2b",
-            padding: { x: 12, y: 8 },
-          })
-          .setOrigin(0.5).setDepth(20);
-        if (!this.bossOpen && !this.bossHit) {
+      const event = this.encounter.tick(time);
+      if (event) {
+        this.renderBoss();
+        if (event === "attack") {
           this.lives--;
           this.hud();
           if (this.lives <= 0) this.finish(false);
         }
-        this.nextSpawn = time + (this.bossOpen ? 2200 : 900);
       }
       return;
     }
@@ -411,7 +419,7 @@ function menu() {
   el("menu").hidden = false;
   el("arsenal").hidden = true;
   el<HTMLButtonElement>("arsenal-open").disabled = !townReady;
-  document.body.classList.remove("in-arsenal", "in-play");
+  document.body.classList.remove("in-arsenal", "in-play", "boss-mode");
   document.body.classList.add("in-menu");
   window.scrollTo(0, 0);
   document.querySelector(".saloon-transition")?.remove();
@@ -450,6 +458,7 @@ function start(i: number) {
   if (!townReady) return;
   document.body.classList.remove("in-menu", "in-arsenal");
   document.body.classList.add("in-play");
+  document.body.classList.toggle("boss-mode", i === 4);
   el("arsenal").hidden = true;
   // The doors reveal the selected map while the conversation holds gameplay.
   document.querySelector(".saloon-transition")?.remove();

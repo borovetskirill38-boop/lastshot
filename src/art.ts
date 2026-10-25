@@ -5,6 +5,7 @@ import weaponTexture from "./visuals/revolver-hand.webp?inline";
 import arsenalModels from "./visuals/arsenal-models.webp?inline";
 import streetTexture from "./visuals/street-dusk.webp?inline";
 import tavernTexture from "./visuals/tavern.webp?inline";
+import bossTexture from "./visuals/boss-encounter.webp?inline";
 import { tavernCovers } from "./maps.js";
 
 type Graphics = Phaser.GameObjects.Graphics;
@@ -25,6 +26,7 @@ export function preloadArt(scene: Phaser.Scene) {
   scene.load.image(townArtworkKey, townTexture);
   scene.load.image("street-dusk", streetTexture);
   scene.load.image("tavern", tavernTexture);
+  scene.load.image("boss-encounter", bossTexture);
   scene.load.image(peopleKey, peopleTexture);
   scene.load.image("revolver-hand", weaponTexture);
   scene.load.image("arsenal-models", arsenalModels);
@@ -157,6 +159,7 @@ export function createPerson(
   scale = 1,
   tint = 0xffffff,
 ) {
+  if (boss) return createBoss(scene, x, y, scale, tint, "boss");
   const texture = scene.textures.get(peopleKey);
   const source = texture.getSourceImage();
   if (!texture.has("bandit-mustache")) {
@@ -179,9 +182,7 @@ export function createPerson(
     appearances.set(scene, counters);
   }
   const role = civilian ? "civilian" : "bandit";
-  const variant = boss
-    ? "boss"
-    : `${role}-${looks[role][counters[role]++ % looks[role].length]}`;
+  const variant = `${role}-${looks[role][counters[role]++ % looks[role].length]}`;
   const shadow = scene.add.ellipse(2, 42, 66, 10, 0x080d12, 0.48);
   const portrait = scene.add
     .image(0, 0, peopleKey, variant)
@@ -193,6 +194,27 @@ export function createPerson(
     .setScale(scale)
     .setDepth(10)
     .setData({ appearance: variant, civilian, boss });
+}
+
+/** The boss and Anna use the very same atlas cells as their dialogue portraits. */
+export function createBoss(
+  scene: Phaser.Scene, x: number, y: number, scale: number, tint: number,
+  appearance: "boss" | "shield" | "hostage",
+) {
+  const texture = scene.textures.get("boss-encounter");
+  const source = texture.getSourceImage();
+  if (!texture.has("boss")) {
+    ["boss", "shield", "hostage"].forEach((name, i) => {
+      const left = Math.round(i * source.width / 3);
+      const right = Math.round((i + 1) * source.width / 3);
+      texture.add(name, 0, left, 0, right - left, source.height);
+    });
+  }
+  const shadow = scene.add.ellipse(0, 42, appearance === "shield" ? 88 : 66, 10, 0x080d12, 0.48);
+  const portrait = scene.add.image(0, 0, "boss-encounter", appearance)
+    .setOrigin(0.5, 0.58).setDisplaySize(108, 108).setTint(tint);
+  return scene.add.container(x, y, [shadow, portrait]).setScale(scale).setDepth(10)
+    .setData({ appearance, boss: appearance !== "hostage", civilian: appearance === "hostage" });
 }
 
 /** Small cached light/casing textures complement the photographic view model. */

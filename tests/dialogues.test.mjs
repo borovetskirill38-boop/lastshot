@@ -4,17 +4,22 @@ import { getIntroDialogue } from "../src/dialogues.js";
 import { levels } from "../src/rules.js";
 import { maps } from "../src/maps.js";
 
-test("every level and location has a short alternating conversation with the appropriate opponent", () => {
+test("every mode has short character lines and the boss conversation includes Anna's calls for help", () => {
   for (const map of maps) {
     const challenges = new Set();
     for (let level = 0; level < levels.length; level++) {
       const lines = getIntroDialogue(level, map.id);
-      const opponent = level === 4 ? "boss" : "bandit";
-      assert.deepEqual(lines.map((line) => line.speaker), ["hero", opponent, "hero", opponent]);
+      const speakers = level === 4 ? ["hero", "boss", "hostage", "hero", "boss", "hostage", "hero"]
+        : ["hero", "bandit", "hero", "bandit"];
+      assert.deepEqual(lines.map((line) => line.speaker), speakers);
       assert.equal(lines[0].name, "Шериф");
       assert.equal(lines[1].name, level === 4 ? "Главарь" : "Бандит");
       for (const line of lines) assert.ok(line.text.length > 10 && line.text.length <= 120);
       challenges.add(lines[1].text);
+      if (level === 4) {
+        assert.ok(lines.filter((line) => line.name === "Анна").length >= 2);
+        assert.ok(lines.some((line) => /Помоги|спаси/.test(line.text)));
+      }
     }
     assert.equal(challenges.size, levels.length);
   }

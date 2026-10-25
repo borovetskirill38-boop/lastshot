@@ -99,10 +99,13 @@ test("hits, misses and civilian hits are counted once, ignore blocked shots and 
   await page.evaluate(async () => {
     const { game } = await import("/src/main.ts");
     const s = game.scene.getScene("town") as any;
-    s.nextSpawn = Infinity;
-    s.bossOpen = false; s.shoot(480, 315);
-    s.bossOpen = true; s.bossHP = 2;
-    s.shoot(480, 315); s.shoot(480, 315); s.shoot(480, 315);
+    s.encounter.nextAt = Infinity;
+    const position = s.encounter.position;
+    s.shoot(position.x, position.y);
+    s.encounter.phase = "exposed"; s.encounter.hp = 2;
+    s.shoot(position.x, position.y);
+    s.encounter.phase = "exposed";
+    s.shoot(position.x, position.y); s.shoot(position.x, position.y);
   });
   const final = await save(page);
   expect(final.stats["last-word"]).toEqual({ hits: 2, misses: 1, civilianHits: 0 });

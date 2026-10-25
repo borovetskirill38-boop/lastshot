@@ -16,7 +16,7 @@ test("curved table and slanted bar cover protect exactly the drawn upper edge", 
   assert.ok(coverTopAt(241, table) < coverTopAt(272, table));
   assert.equal(hitsTarget(241, 238, table), false);
   assert.equal(hitsTarget(272, 238, table), true);
-  for (const target of [...tavern.slots, tavern.boss]) {
+  for (const target of tavern.slots) {
     const top = coverTopAt(target.x, target);
     assert.equal(hitsTarget(target.x, top + 2, target), false);
     assert.equal(hitsTarget(target.x, Math.min(target.y, top - 2), target), true);
@@ -27,7 +27,7 @@ test("all spawn positions have visible hit areas inside the world and distinct t
   assert.equal(new Set(maps.map((map) => map.id)).size, maps.length);
   for (const map of maps) {
     assert.equal(map.slots.length, 6);
-    for (const position of [...map.slots, map.boss]) {
+    for (const position of map.slots) {
       assert.ok(position.x - 40 * position.scale >= 0);
       assert.ok(position.x + 40 * position.scale <= 960);
       assert.ok(position.y - 56 * position.scale >= 0);
@@ -42,7 +42,7 @@ test("all spawn positions have visible hit areas inside the world and distinct t
 
 test("wagon and barrel cover stop bullets through the visible lower body; distance scales the hit area", () => {
   const street = maps[1];
-  for (const position of [street.slots[1], street.slots[5], street.boss]) {
+  for (const position of [street.slots[1], street.slots[5]]) {
     assert.ok(position.coverY < position.y + 43 * position.scale);
     assert.equal(hitsTarget(position.x, position.coverY - 2, position), true);
     assert.equal(hitsTarget(position.x, position.coverY + 2, position), false);
