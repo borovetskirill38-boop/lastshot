@@ -1,3 +1,4 @@
+import { skipIntro } from "./helpers";
 import { test, expect, Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -63,6 +64,7 @@ for (const [width, height] of sizes) {
       : width === 320 ? /04.*Шесть патронов/
         : width === 768 ? /03.*Быстрая рука/ : /02.*Мирные жители/;
     await page.getByRole("button", { name: mode }).click();
+    await skipIntro(page);
     await page.getByRole("button", { name: "Пауза", exact: true }).click();
     await gameFits(page);
     await page.screenshot({ path: `test-results/responsive-game-${width}x${height}.png`, fullPage: true });
@@ -84,6 +86,7 @@ test("aim stays aligned and the run survives window resizing and orientation cha
   await page.addInitScript(() => localStorage.setItem("lastshot-progress", JSON.stringify({ unlocked: 5, best: [] })));
   await page.goto("/");
   await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
+  await skipIntro(page);
   await page.getByRole("button", { name: "Пауза", exact: true }).click();
   let hits = 0;
   for (const [width, height] of [[320, 568], [844, 390], [1280, 720]]) {
@@ -121,6 +124,7 @@ test("standalone HTML adapts offline during rotation and keeps touch and reload 
   page.on("pageerror", (error) => errors.push(error.message));
   await page.setContent(await readFile("lastshot.html", "utf8"));
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).tap();
+  await skipIntro(page, true);
   let ammo = 6;
   for (const [width, height] of [[844, 390], [320, 568]]) {
     await page.setViewportSize({ width, height });

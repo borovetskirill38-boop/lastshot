@@ -1,3 +1,4 @@
+import { skipIntro } from "./helpers";
 import { test, expect, Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -32,6 +33,7 @@ test("location selection persists, keeps progress and releases old scenery when 
   for (const map of ["tavern", "street", "saloon", "tavern", "saloon", "street", "tavern"] as const) {
     await mapButton[map](page).click();
     await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
+    await skipIntro(page);
     await page.getByRole("button", { name: "Пауза", exact: true }).click();
     const state = await page.evaluate(async () => {
       const { game } = await import("/src/main.ts");
@@ -65,6 +67,7 @@ for (const location of locations) {
       // The actual spawn code selects the last cover position and a bandit.
       await page.evaluate(() => { Math.random = () => 0.99; });
       await page.getByRole("button", { name: new RegExp(mode) }).click();
+      await skipIntro(page);
       await expect(page.locator("#level-name")).toContainText(location.title);
       if (mode === "Шериф против главаря") {
         await expect.poll(() => page.evaluate(async () => {
@@ -87,6 +90,7 @@ for (const location of locations) {
         await shot(page, boss.x, boss.y);
         await expect(page.locator("#result-title")).toHaveText("Город свободен!");
         await page.getByRole("button", { name: "Ещё раз", exact: true }).click();
+        await skipIntro(page);
         await expect(page.locator("#level-name")).toContainText(location.title);
       } else {
         await expect.poll(() => page.evaluate(async () => {
@@ -122,6 +126,7 @@ for (const location of locations) {
     await page.goto("/");
     await mapButton[location.id](page).click();
     await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
+    await skipIntro(page);
     await page.getByRole("button", { name: "Пауза", exact: true }).click();
     await expect(page.locator(".saloon-transition")).toHaveCount(0);
     const positions = await page.evaluate(async () => {
@@ -154,6 +159,7 @@ for (const location of locations) {
     await expect(mapButton[location.id](page)).toHaveAttribute("aria-pressed", "true");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.getByRole("button", { name: /01.*Первый выстрел/ }).tap();
+    await skipIntro(page, true);
     await page.getByRole("button", { name: "Пауза", exact: true }).tap();
     for (const [width, height] of [[280, 653], [844, 390]]) {
       await page.setViewportSize({ width, height });
@@ -181,6 +187,7 @@ test("tavern foreground and native hit testing follow the curved table instead o
   await page.goto("/");
   await tavernButton(page).click();
   await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
+  await skipIntro(page);
   await page.getByRole("button", { name: "Пауза", exact: true }).click();
   await expect(page.locator(".saloon-transition")).toHaveCount(0);
   const mask = await page.evaluate(async () => {

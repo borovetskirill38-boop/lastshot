@@ -1,3 +1,4 @@
+import { skipIntro } from "./helpers";
 import { test, expect, Page } from "@playwright/test";
 async function scene<T>(page: Page, fn: string): Promise<T> {
   return page.evaluate(async (source) => {
@@ -24,6 +25,7 @@ test("first level is endless until three misses", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("canvas")).toBeAttached();
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
+  await skipIntro(page);
   await expect(page.locator("#life-count")).toHaveText("3/3");
   // Pace real spawns so browser/reload latency cannot expire unrelated targets.
   // This scenario checks eight hits followed by exactly three deliberate misses.
@@ -83,6 +85,7 @@ test("civilian costs life, pause freezes timers, misses and defeat", async ({
   await page.goto("/");
   await expect(page.locator("canvas")).toBeAttached();
   await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
+  await skipIntro(page);
   await page.getByRole("button", { name: "Пауза", exact: true }).click();
   const time = await scene<number>(page, "s=>s.nextSpawn-s.clock");
   await page.waitForTimeout(400);
@@ -113,6 +116,7 @@ test("boss takes six hits and campaign completes", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("canvas")).toBeAttached();
   await page.getByRole("button", { name: /Шериф против главаря/ }).click();
+  await skipIntro(page);
   await expect.poll(() => scene(page, "s=>s.bossOpen")).toBe(true);
   for (let i = 0; i < 6; i++) {
     await expect
@@ -124,6 +128,7 @@ test("boss takes six hits and campaign completes", async ({ page }) => {
   await expect(page.locator("#result-title")).toHaveText("Город свободен!");
   await expect(page.locator("#next")).toBeHidden();
   await page.getByRole("button", { name: "Ещё раз" }).click();
+  await skipIntro(page);
   await expect.poll(() => scene(page, "s=>s.bossOpen")).toBe(true);
   expect(await scene(page, "s=>s.bossHP")).toBe(6);
 });
@@ -139,6 +144,7 @@ test("mobile touch shoots and reloads", async ({ browser }) => {
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   await expect(page.locator("canvas")).toBeAttached();
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).tap();
+  await skipIntro(page, true);
   const box = await page.locator("canvas").boundingBox();
   expect(box!.width).toBeLessThanOrEqual(390);
   await page.touchscreen.tap(box!.x + 10, box!.y + 10);
@@ -156,6 +162,7 @@ test("view model tracks aim, fires at the muzzle, ejects brass and freezes on pa
   await page.goto("/");
   await expect(page.locator("canvas")).toBeAttached();
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
+  await skipIntro(page);
   await page.locator("canvas").scrollIntoViewIfNeeded();
   const box = await page.locator("canvas").boundingBox();
   const startX = await scene<number>(page, "s=>s.weapon.view.x");
@@ -207,6 +214,7 @@ test("view model tracks aim, fires at the muzzle, ejects brass and freezes on pa
   expect(blocked.shells).toBe(0);
   await page.getByRole("button", { name: "← Уровни" }).click();
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
+  await skipIntro(page);
   expect(await scene(page, "s=>s.weapon.shells.length")).toBe(0);
   expect(await scene(page, "s=>s.weapon.flash.visible")).toBe(false);
   expect(errors).toEqual([]);

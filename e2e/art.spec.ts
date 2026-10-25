@@ -1,3 +1,4 @@
+import { skipIntro } from "./helpers";
 import { test, expect } from "@playwright/test";
 
 test("people cycle distinct appearances, reuse their atlas and remain inside the original hit area", async ({ page }) => {
@@ -5,6 +6,7 @@ test("people cycle distinct appearances, reuse their atlas and remain inside the
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
+  await skipIntro(page);
   const result = await page.evaluate(async () => {
     const { game } = await import("/src/main.ts");
     const s = game.scene.getScene("town") as any;
@@ -73,6 +75,7 @@ test("level selection waits for artwork decoding before starting gameplay", asyn
   await expect(page.locator("#play")).toBeHidden();
   await page.evaluate(() => (window as any).releaseArtwork());
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
+  await skipIntro(page);
   await expect(page.locator("#play")).toBeVisible();
   await expect(page.locator("#stats")).toContainText("Патроны 6/6");
   expect(errors).toEqual([]);

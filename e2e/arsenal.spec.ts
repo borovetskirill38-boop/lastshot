@@ -1,3 +1,4 @@
+import { skipIntro } from "./helpers";
 import { test, expect } from "@playwright/test";
 
 const pocket = "Пыльный спутник", long = "Дальний дозор", classic = "Последний довод";
@@ -29,6 +30,7 @@ test("weapon choice changes capacity and viewmodel, reloads to that capacity and
     await back(page);
     await expect(page.locator("#loadout-label")).toHaveText(name);
     await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
+    await skipIntro(page);
     await expect(page.locator("#stats")).toContainText(`Патроны ${capacity}/${capacity}`);
     await expect(page.locator("#ammo-rounds i")).toHaveCount(capacity);
     const visual = await page.evaluate(async () => {
@@ -64,6 +66,7 @@ test("hits, misses and civilian hits are counted once, ignore blocked shots and 
   await equip(page, pocket);
   await back(page);
   await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
+  await skipIntro(page);
   await page.evaluate(async () => {
     const { game } = await import("/src/main.ts");
     const s = game.scene.getScene("town") as any;
@@ -92,6 +95,7 @@ test("hits, misses and civilian hits are counted once, ignore blocked shots and 
   await page.getByRole("button", { name: "Взять оружие", exact: true }).click();
   await back(page);
   await page.getByRole("button", { name: /Шериф против главаря/ }).click();
+  await skipIntro(page);
   await page.evaluate(async () => {
     const { game } = await import("/src/main.ts");
     const s = game.scene.getScene("town") as any;
@@ -124,6 +128,7 @@ test("unavailable storage keeps selection and statistics working for the session
   await expect(page.locator("#arsenal-save-note")).toContainText("Сохранение недоступно");
   await back(page);
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
+  await skipIntro(page);
   await expect(page.locator("#stats")).toContainText("Патроны 5/5");
   await page.evaluate(async () => {
     const { game } = await import("/src/main.ts");

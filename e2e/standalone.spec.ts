@@ -1,3 +1,4 @@
+import { skipIntro } from "./helpers";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -28,6 +29,7 @@ test("single HTML runs offline with weapon and no external dependencies", async 
   await page.getByRole("button", { name: "Переключить звук" }).click();
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
+  await skipIntro(page);
   await page.locator("canvas").scrollIntoViewIfNeeded();
   const box = await page.locator("canvas").boundingBox();
   expect(box!.width).toBeGreaterThan(300);
@@ -64,6 +66,7 @@ test("offline mobile workshop equips a weapon, uses its capacity and keeps shot 
   await page.screenshot({ path: "test-results/arsenal-offline-mobile.png", fullPage: true });
   await page.getByRole("button", { name: "← Главное меню", exact: true }).tap();
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).tap();
+  await skipIntro(page, true);
   await expect(page.locator("#stats")).toContainText("Патроны 8/8");
   const box = await page.locator("canvas").boundingBox();
   await page.touchscreen.tap(box!.x + 10, box!.y + 10);

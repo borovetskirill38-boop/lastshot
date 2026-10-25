@@ -1,3 +1,4 @@
+import { skipIntro } from "./helpers";
 import { test, expect } from "@playwright/test";
 
 test("saloon level doors respond to hover and keyboard, keep locked levels closed, and return cleanly", async ({ page }) => {
@@ -19,6 +20,7 @@ test("saloon level doors respond to hover and keyboard, keep locked levels close
   expect(await transform(".level:nth-child(2) .door-left")).toBe("none");
   await first.focus();
   await page.keyboard.press("Enter");
+  await skipIntro(page);
   await expect(page.locator("body")).not.toHaveClass(/in-menu/);
   await expect(page.locator("#play")).toBeVisible();
   await expect(page.locator(".saloon-transition")).toHaveCount(0);
@@ -57,6 +59,7 @@ test("mobile saloon menu fits the viewport, supports touch, and respects reduced
   expect(layout.haze).toBe("none");
   await page.screenshot({ path: "test-results/saloon-menu-mobile.png", fullPage: true });
   await first.tap();
+  await skipIntro(page, true);
   await expect(page.locator("#play")).toBeVisible();
   await expect(page.locator(".saloon-transition")).toHaveCount(0);
   await expect(page.locator("#stats")).toContainText("Патроны 6/6");

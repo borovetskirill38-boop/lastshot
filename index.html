@@ -172,6 +172,27 @@
         </p>
       </details>
     </div>
+    <dialog id="intro-dialog" aria-labelledby="dialogue-title" aria-describedby="dialogue-context">
+      <div class="dialogue-shell">
+        <div class="dialogue-topline">
+          <button id="dialogue-back" type="button">← Выбор уровня</button>
+          <button id="dialogue-skip" type="button">Пропустить диалог</button>
+        </div>
+        <article class="dialogue-card">
+          <p id="dialogue-context" class="eyebrow"></p>
+          <h2 id="dialogue-title">Перед перестрелкой</h2>
+          <div class="dialogue-speech" aria-live="polite" aria-atomic="true">
+            <p id="dialogue-speaker"></p>
+            <p id="dialogue-line"></p>
+          </div>
+          <div class="dialogue-bottomline">
+            <p class="dialogue-hint">Клик или касание — следующая реплика</p>
+            <span id="dialogue-progress" aria-label="Номер реплики"></span>
+            <button id="dialogue-next" type="button">Дальше →</button>
+          </div>
+        </article>
+      </div>
+    </dialog>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

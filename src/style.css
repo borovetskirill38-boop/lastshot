@@ -1002,3 +1002,67 @@ body[data-map="tavern"] .sun-haze, body[data-map="tavern"] .tumbleweed { display
   .map-preview { flex-basis: 96px; }
   .map-check { align-self: center; }
 }
+
+/* A modal conversation holds the whole round until the final deliberate click. */
+body.in-dialogue { overflow: hidden; }
+#intro-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding:
+    max(16px, env(safe-area-inset-top, 0px))
+    max(16px, env(safe-area-inset-right, 0px))
+    max(16px, env(safe-area-inset-bottom, 0px))
+    max(16px, env(safe-area-inset-left, 0px));
+  border: 0;
+  color: #f4dfbd;
+  background: linear-gradient(180deg, #100c0a66, #100c0a22 30%, #100c0acc);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+#intro-dialog[open] { display: grid; align-items: center; }
+#intro-dialog::backdrop { background: #100c0a55; }
+.dialogue-shell { width: min(820px, 100%); min-width: 0; margin: auto; }
+.dialogue-topline { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.dialogue-topline button { font-size: 12px; padding: 10px 14px; background: #251a12ed; }
+.dialogue-card {
+  padding: clamp(18px, 4vw, 38px);
+  border: 1px solid #be9155;
+  border-radius: 4px;
+  background: linear-gradient(130deg, #76513233, transparent 60%), #241c19f5;
+  box-shadow: 0 18px 70px #0009, inset 0 0 0 4px #17110d88;
+}
+#dialogue-context { margin: 0; font-size: 10px; letter-spacing: 1.5px; line-height: 1.7; overflow-wrap: anywhere; }
+#dialogue-title { margin: 10px 0 24px; color: #d0af7e; font: 12px/1.4 monospace; letter-spacing: 3px; text-transform: uppercase; }
+.dialogue-speech { padding-left: 22px; border-left: 3px solid #d9ad62; }
+#dialogue-speaker { margin: 0 0 12px; color: #e9bd72; font: 700 14px/1.5 monospace; letter-spacing: 2px; text-transform: uppercase; }
+#dialogue-line { margin: 0; min-height: 4.5em; font: clamp(18px, 2.7vw, 26px)/1.5 Georgia, serif; overflow-wrap: anywhere; }
+#intro-dialog[data-speaker="bandit"] .dialogue-speech, #intro-dialog[data-speaker="boss"] .dialogue-speech { border-color: #bf6650; }
+#intro-dialog[data-speaker="bandit"] #dialogue-speaker, #intro-dialog[data-speaker="boss"] #dialogue-speaker { color: #ee9f84; }
+.dialogue-bottomline { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
+.dialogue-hint { flex: 1 1 160px; margin: 0; color: #b9a084; font: 11px/1.6 monospace; }
+#dialogue-progress { color: #cbaa7d; font: 12px/1.5 monospace; white-space: nowrap; }
+#dialogue-next { min-width: min(190px, 100%); background: #765331; }
+@media (max-width: 480px) {
+  .dialogue-speech { padding-left: 12px; }
+  #dialogue-title { letter-spacing: 1.5px; margin-bottom: 18px; }
+  #dialogue-speaker { letter-spacing: 1px; }
+  #dialogue-line { min-height: 6em; }
+  .dialogue-bottomline { gap: 10px; margin-top: 18px; }
+  .dialogue-hint { flex-basis: calc(100% - 55px); }
+  #dialogue-next { width: 100%; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  #intro-dialog { padding-block: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-bottom, 0px)); }
+  .dialogue-topline { margin-bottom: 8px; }
+  .dialogue-card { padding: 16px 24px; }
+  #dialogue-title { margin: 5px 0 12px; }
+  #dialogue-speaker { margin-bottom: 6px; }
+  #dialogue-line { min-height: 3em; font-size: 18px; }
+  .dialogue-bottomline { margin-top: 12px; }
+}

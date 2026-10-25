@@ -1,3 +1,4 @@
+import { skipIntro } from "./helpers";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
@@ -83,6 +84,7 @@ test("hits route to the right material and reload audio pauses, resumes and canc
   await page.getByRole("button", { name: "Переключить звук" }).click();
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
+  await skipIntro(page);
   const sounds = await page.evaluate(async () => {
     const { game, gameAudio } = await import("/src/main.ts");
     const s = game.scene.getScene("town") as any;
@@ -167,6 +169,7 @@ test("hits route to the right material and reload audio pauses, resumes and canc
   expect((await state()).active).toBe(0);
   await page.getByRole("button", { name: "← Уровни" }).click();
   await page.getByRole("button", { name: /Шериф против главаря/ }).click();
+  await skipIntro(page);
   await expect
     .poll(() =>
       page.evaluate(async () => {
@@ -211,6 +214,7 @@ test("unavailable Web Audio does not break shooting", async ({ page }) => {
   await page.getByRole("button", { name: "Переключить звук" }).click();
   await expect(page.locator("#sound")).toHaveText("Звук недоступен");
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
+  await skipIntro(page);
   await page.locator("canvas").scrollIntoViewIfNeeded();
   const box = await page.locator("canvas").boundingBox();
   await page.mouse.click(box!.x + 20, box!.y + 20);
@@ -267,6 +271,7 @@ test("menu music and ambience are unique loops, stop for play, mute and hide, an
   await expect.poll(async () => (await state()).context).toBe("running");
   expect((await state()).background).toHaveLength(2);
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
+  await skipIntro(page);
   expect((await state()).background).toEqual([]);
   await page.getByRole("button", { name: "← Уровни" }).click();
   expect((await state()).background).toHaveLength(2);
@@ -291,6 +296,7 @@ test("the same centered gun take overlaps every hit instead of replacing it", as
   await page.getByRole("button", { name: "Переключить звук" }).click();
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
+  await skipIntro(page);
   const result = await page.evaluate(async () => {
     const { game, gameAudio } = await import("/src/main.ts");
     const a = gameAudio as any,

@@ -3,6 +3,8 @@ import "./style.css";
 import { GameAudio } from "./audio";
 import { Armory } from "./armory";
 import { observeGameLayout } from "./layout";
+import { IntroDialogue } from "./dialogue";
+import { getIntroDialogue } from "./dialogues.js";
 import { hitsWood } from "./surfaces.js";
 import { preloadArt, drawTown, drawStreet, drawTavern, createPerson, ViewWeapon } from "./art";
 import { maps, readMap, hitsTarget } from "./maps.js";
@@ -27,6 +29,7 @@ let selectedMap = readMap(storage);
 let mapSaved = true;
 export const gameAudio = new GameAudio();
 const armory = new Armory(storage);
+const introDialogue = new IntroDialogue();
 type Target = {
   x: number;
   y: number;
@@ -50,6 +53,7 @@ class Town extends Phaser.Scene {
   kills = 0;
   reloading = false;
   paused = false;
+  intro = false;
   ended = true;
   nextSpawn = 0;
   reloadEnd = 0;
@@ -71,7 +75,7 @@ class Town extends Phaser.Scene {
     this.drawTown();
     this.weapon = new ViewWeapon(this);
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
-      if (!this.ended && !this.paused) this.weapon.aim(p.x, p.y);
+      if (!this.ended && !this.paused && !this.intro) this.weapon.aim(p.x, p.y);
     });
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
       this.shoot(p.x, p.y);
@@ -97,6 +101,7 @@ class Town extends Phaser.Scene {
     return createPerson(this, x, y, civilian, boss, position?.scale ?? 1, this.map.tint);
   }
   begin() {
+    this.intro = true;
     gameAudio.setMenu(false);
     gameAudio.stop();
     gameAudio.setPaused(false);
@@ -128,7 +133,18 @@ class Town extends Phaser.Scene {
     this.weapon.reset();
     el("pause").textContent = "Пауза";
     el("reload").textContent = "Перезарядить · R";
+    el<HTMLButtonElement>("pause").disabled = true;
+    el<HTMLButtonElement>("reload").disabled = true;
     this.hud();
+  }
+  startFight() {
+    if (!this.intro || this.ended) return;
+    this.intro = false;
+    this.nextSpawn = this.clock + 700;
+    el<HTMLButtonElement>("pause").disabled = false;
+    el<HTMLButtonElement>("reload").disabled = false;
+    this.game.canvas.tabIndex = 0;
+    this.game.canvas.focus({ preventScroll: true });
   }
   hud() {
     const progressText =
@@ -155,20 +171,20 @@ class Town extends Phaser.Scene {
     );
   }
   reload() {
-    if (this.ended || this.paused || this.reloading || this.ammo === this.capacity) return;
+    if (this.intro || this.ended || this.paused || this.reloading || this.ammo === this.capacity) return;
     this.reloading = true;
     this.reloadEnd = this.clock + 1100;
     gameAudio.play("reload");
     el("reload").textContent = "Перезарядка…";
   }
   togglePause() {
-    if (this.ended) return;
+    if (this.intro || this.ended) return;
     this.paused = !this.paused;
     gameAudio.setPaused(this.paused);
     el("pause").textContent = this.paused ? "Продолжить" : "Пауза";
   }
   shoot(x: number, y: number) {
-    if (this.ended || this.paused || this.reloading || this.ammo === 0) return;
+    if (this.intro || this.ended || this.paused || this.reloading || this.ammo === 0) return;
     this.ammo--;
     this.weapon.aim(x, y);
     this.weapon.fire();
@@ -222,7 +238,7 @@ class Town extends Phaser.Scene {
     this.hud();
   }
   finish(win: boolean) {
-    if (this.ended) return;
+    if (this.intro || this.ended) return;
     this.ended = true;
     gameAudio.stop("reload");
     let saved = true;
@@ -251,7 +267,7 @@ class Town extends Phaser.Scene {
     el("result").hidden = false;
   }
   update(_time: number, delta: number) {
-    if (this.paused) return;
+    if (this.intro || this.paused) return;
     if (this.ended) {
       this.weapon?.update(delta, false);
       return;
@@ -384,10 +400,12 @@ function updateMapPicker() {
 }
 
 function menu() {
+  introDialogue.close();
   gameAudio.stop();
   gameAudio.setPaused(false);
   gameAudio.setMenu(true);
   scene.ended = true;
+  scene.intro = false;
   el("play").hidden = true;
   el("result").hidden = true;
   el("menu").hidden = false;
@@ -433,7 +451,7 @@ function start(i: number) {
   document.body.classList.remove("in-menu", "in-arsenal");
   document.body.classList.add("in-play");
   el("arsenal").hidden = true;
-  // The overlay opens over the live scene without delaying input or sound.
+  // The doors reveal the selected map while the conversation holds gameplay.
   document.querySelector(".saloon-transition")?.remove();
   const entrance = document.createElement("div");
   entrance.className = "saloon-transition";
@@ -453,6 +471,15 @@ function start(i: number) {
   gameLayout.fit();
   window.scrollTo(0, 0);
   gameAudio.play("door");
+  introDialogue.open(
+    `${selectedMap.name} · ${levels[i].name}`,
+    getIntroDialogue(i, selectedMap.id),
+    () => scene.startFight(),
+    () => {
+      menu();
+      el("levels").querySelectorAll<HTMLButtonElement>(".level")[i]?.focus({ preventScroll: true });
+    },
+  );
 }
 el("arsenal-open").onclick = () => {
   if (!townReady) return;
