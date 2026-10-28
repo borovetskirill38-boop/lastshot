@@ -27,8 +27,8 @@ for (const map of ["saloon", "street", "tavern"]) {
     await page.keyboard.press("r");
     await expect(page.locator("#stats")).toContainText("Патроны 6/6");
     await page.locator("#move-left").click();
-    await expect(page.locator("#cover-status")).toContainText("Переход");
-    await expect(page.locator("#cover-status")).toContainText("За укрытием");
+    await expect(page.locator("#play")).toHaveAttribute("data-cover", "open");
+    await expect(page.locator("#play")).toHaveAttribute("data-cover", "safe");
     await expect(page.locator("#cover-status")).toContainText("1/3");
     await page.screenshot({ path: `test-results/cover-${map}.png`, fullPage: true });
     await page.keyboard.press("w");
@@ -67,7 +67,8 @@ for (const map of ["saloon", "street", "tavern"]) {
     });
     expect(aiming).toMatchObject({ frame: "0-2", lives: 3 });
     expect(aiming.left).toBe(500);
-    await expect(page.locator("#threat-notice")).toBeVisible();
+    await expect(page.locator("#threat-notice")).toHaveCount(0);
+    await expect(page.locator("#cover-status")).not.toContainText(/Вы открыты|За укрытием|Переход/);
     await page.screenshot({ path: `test-results/aiming-${map}.png`, fullPage: true });
     const result = await page.evaluate(async () => {
       const { game, gameAudio } = await import("/src/main.ts"); const s = game.scene.getScene("town") as any;

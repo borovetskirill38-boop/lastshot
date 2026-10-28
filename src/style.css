@@ -1213,11 +1213,8 @@ body.in-prologue { overflow: hidden; background: #110e0b; }
 
 .loadout-readout { display: flex; flex-wrap: wrap; gap: 4px 18px; }
 #cover-status { color: #e2ba80; }
-#play[data-cover="safe"] #cover-status { color: #b7d6a0; }
 .movement-controls { grid-column: 1 / -1; display: grid; grid-template-columns: 0.7fr 1.3fr 1.3fr 0.7fr; gap: 5px; }
 .movement-controls button { min-height: 44px; touch-action: manipulation; }
 .movement-controls small { color: #b7a088; margin-left: 5px; }
 #crouch[aria-pressed="true"] { border-color: #a9c28d; background: #33422c; }
-#threat-notice { position: absolute; z-index: 3; top: 52px; left: 50%; transform: translateX(-50%); width: max-content; max-width: 94%; padding: 8px 12px; text-align: center; color: #ffe5b0; background: #501c0de8; border: 1px solid #d69b52; border-radius: 4px; font: 700 clamp(10px, 1.4vw, 14px)/1.4 Georgia, serif; pointer-events: none; }
-@container (max-width: 650px) { #threat-notice { top: 38px; padding: 5px 8px; } }
 @media (max-width: 420px), (max-height: 500px) { .movement-controls small { display: none; } .movement-controls button { font-size: 11px; } #cover-status { font-size: 10px; } }

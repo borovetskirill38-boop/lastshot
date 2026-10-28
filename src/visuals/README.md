@@ -5,7 +5,7 @@
 - `enemy-combat.webp`: original transparent1448×1086 atlas, four rows (mustache,
   bandolier, scar, Billy) and four poses (lowered gun, raising, aimed at viewer,
   recoil). Existing character art provided appearance references. Pose frames,
-  shoulder motion, timed muzzle flash and warning arcs use gameplay time.
+  shoulder motion and timed muzzle flash use gameplay time.
 - `player-covers.webp`: original transparent2172×724 props: oak barrels,
   freight wagon and overturned saloon table. Measured cropped frames avoid
   gutters; existing crate artwork completes the nine map-specific positions.

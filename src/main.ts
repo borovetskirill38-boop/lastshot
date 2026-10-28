@@ -236,8 +236,7 @@ class Town extends Phaser.Scene {
   updateCombatUI() {
     const p = this.movement;
     const cover = playerCovers[this.map.id as keyof typeof playerCovers][p.lane];
-    const state = p.moving ? "Переход · вы открыты" : p.protected ? "За укрытием" : "Вы открыты";
-    const text = `${p.lane + 1}/3 · ${cover.name} · ${state}`;
+    const text = `${p.lane + 1}/3 · ${cover.name}`;
     if (el("cover-status").textContent !== text) el("cover-status").textContent = text;
     el("play").dataset.cover = p.protected ? "safe" : "open";
     const locked = this.ended || this.intro || this.paused;
@@ -346,7 +345,6 @@ class Town extends Phaser.Scene {
     if (this.intro || this.ended) return;
     this.ended = true;
     this.updateCombatUI();
-    el("threat-notice").hidden = true;
     gameAudio.stop("reload");
     let saved = true;
     const endlessRun = selected === 0;
@@ -410,7 +408,6 @@ class Town extends Phaser.Scene {
         const progress = aiming ? 1 - (this.encounter.nextAt - time) / bossTiming.exposed : 1;
         animateGunman(this.bossView, progress, time, aiming ? undefined : this.bossRecoilUntil - combatTiming.recoil);
       } else if (this.encounter.phase === "hidden" && this.bossView) this.renderBoss();
-      this.showThreat(aiming);
       return;
     }
     for (const t of [...this.targets]) {
@@ -456,12 +453,6 @@ class Town extends Phaser.Scene {
       }
       this.nextSpawn = time + levels[selected].interval;
     }
-    this.showThreat(this.targets.some(t => t.attack?.started && !t.attack.fired));
-  }
-  showThreat(aiming: boolean) {
-    const notice = el("threat-notice");
-    notice.hidden = !aiming || this.ended;
-    notice.textContent = this.movement.protected ? "Оставайтесь за укрытием — враг целится" : "Враг целится! ↓ Укройтесь или смените позицию";
   }
 }
 const scene = new Town();

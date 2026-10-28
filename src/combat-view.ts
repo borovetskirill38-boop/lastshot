@@ -68,14 +68,13 @@ export function animateGunman(view: Phaser.GameObjects.Container, progress: numb
   const row = appearance.includes("bandolier") ? 1 : appearance.includes("scar") ? 2 : appearance === "boss" ? 3 : 0;
   let image = view.getData("combat-image") as Phaser.GameObjects.Image | undefined;
   let flare = view.getData("combat-flare") as Phaser.GameObjects.Graphics | undefined;
-  let warning = view.getData("combat-warning") as Phaser.GameObjects.Graphics | undefined;
   if (!image) {
     const original = view.list.find(child => child.type === "Image") as Phaser.GameObjects.Image;
     original.setAlpha(0);
     image = scene.add.image(0, 0, "enemy-combat", `${row}-0`).setOrigin(0.5, 0.57).setTint(original.tintTopLeft);
-    flare = scene.add.graphics(); warning = scene.add.graphics();
-    view.add([image, flare, warning]);
-    view.setData({ "combat-image": image, "combat-flare": flare, "combat-warning": warning });
+    flare = scene.add.graphics();
+    view.add([image, flare]);
+    view.setData({ "combat-image": image, "combat-flare": flare });
   }
   const age = firedAt === undefined ? Infinity : now - firedAt;
   const recoil = age >= 0 && age < 300;
@@ -85,13 +84,9 @@ export function animateGunman(view: Phaser.GameObjects.Container, progress: numb
   image.setPosition(recoil ? -Math.sin(age / 300 * Math.PI) * 2 : Math.sin(progress * Math.PI) * 1.2,
     recoil ? -Math.sin(age / 300 * Math.PI) * 3 : -Math.min(progress, 0.5) * 2);
   image.rotation = recoil ? -Math.sin(age / 300 * Math.PI) * 0.035 : 0;
-  flare!.clear(); warning!.clear();
+  flare!.clear();
   if (recoil && age < 75) {
     flare!.fillStyle(0xffd488, 0.5).fillCircle(-5, -20, 18);
     flare!.fillStyle(0xfff7ca, 1).fillTriangle(-13, -18, -4, -40, 5, -16);
-  } else if (firedAt === undefined && progress > 0) {
-    warning!.lineStyle(3, 0xffb84d, 0.9).beginPath().arc(0, -72, 11, -Math.PI / 2,
-      -Math.PI / 2 + Math.PI * 2 * Math.min(1, progress)).strokePath();
-    warning!.fillStyle(0xff6e38, 1).fillCircle(0, -72, 3);
   }
 }
