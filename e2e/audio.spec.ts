@@ -1,4 +1,4 @@
-import { skipIntro } from "./helpers";
+import { skipIntro, setBossRandom } from "./helpers";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
@@ -102,22 +102,22 @@ test("hits route to the right material and reload audio pauses, resumes and canc
       s.shoot(x, y);
       return [...events];
     };
+    const position = s.slots[0];
     const target = (civilian: boolean) =>
       s.targets.push({
-        x: 230,
-        y: 253,
+        ...position,
         slot: 0,
         civilian,
-        view: s.person(230, 253, civilian),
+        view: s.person(position.x, position.y, civilian),
         expires: s.clock + 10000,
       });
     target(false);
-    const enemy = run(230, 253),
-      wood = run(600, 320),
-      window = run(480, 253),
+    const enemy = run(position.x, position.y),
+      wood = run(600, 270),
+      window = run(s.slots[1].x, s.slots[1].y),
       sky = run(30, 30);
     target(true);
-    const civilian = run(230, 253);
+    const civilian = run(position.x, position.y);
     gameAudio.stop();
     events.length = 0;
     s.reload();
@@ -169,6 +169,7 @@ test("hits route to the right material and reload audio pauses, resumes and canc
   expect((await state()).active).toBe(0);
   await page.getByRole("button", { name: "← Уровни" }).click();
   await page.getByRole("button", { name: /Шериф Картер против Билли Пули/ }).click();
+  await setBossRandom(page, [0.9]);
   await skipIntro(page);
   await expect
     .poll(() =>
@@ -314,6 +315,7 @@ test("the same centered gun take overlaps every hit instead of replacing it", as
       return original.call(this, when, offset, duration);
     };
     s.nextSpawn = Infinity;
+    const position = s.slots[0];
     const rows = [];
     for (const target of ["air", "wood", "bandit", "civilian"]) {
       gameAudio.stop();
@@ -322,16 +324,15 @@ test("the same centered gun take overlaps every hit instead of replacing it", as
       s.ammo = 6;
       if (target === "bandit" || target === "civilian")
         s.targets.push({
-          x: 230,
-          y: 253,
+          ...position,
           slot: 0,
           civilian: target === "civilian",
-          view: s.person(230, 253, target === "civilian"),
+          view: s.person(position.x, position.y, target === "civilian"),
           expires: s.clock + 10000,
         });
       s.shoot(
-        target === "air" ? 30 : target === "wood" ? 600 : 230,
-        target === "air" ? 30 : target === "wood" ? 320 : 253,
+        target === "air" ? 30 : target === "wood" ? 600 : position.x,
+        target === "air" ? 30 : target === "wood" ? 270 : position.y,
       );
       const voices = [...a.voices] as any[];
       const gun = voices.find((v) => v.kind === "shot"),

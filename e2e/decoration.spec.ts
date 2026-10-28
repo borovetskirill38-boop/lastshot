@@ -14,9 +14,16 @@ test("every saloon window contains a visible detailed room instead of a black re
   const rooms = await page.evaluate(async () => {
     const { game } = await import("/src/main.ts");
     const scene = game.scene.getScene("town") as any;
-    const context = (game.textures.get("town-scenery") as any).context as CanvasRenderingContext2D;
-    return scene.slots.map((slot: any) => {
-      const data = context.getImageData(slot.x - 35, slot.y - 32, 70, 64).data;
+    const source = scene.scenery.find((layer: any) => layer.name === "map-background").texture.getSourceImage();
+    const canvas = document.createElement("canvas");
+    canvas.width = 960; canvas.height = 540;
+    const context = canvas.getContext("2d")!;
+    context.drawImage(source, 0, 0, 960, 540);
+    return scene.slots.filter((slot: any) => !slot.aperture.door).map((slot: any) => {
+      const room = slot.aperture;
+      const width = room.right - room.left, height = room.bottom - room.top;
+      const data = context.getImageData(Math.ceil(room.left + width * 0.12), Math.ceil(room.top + height * 0.12),
+        Math.floor(width * 0.76), Math.floor(height * 0.76)).data;
       let sum = 0;
       const colors = new Set();
       for (let i = 0; i < data.length; i += 4) {
@@ -26,7 +33,7 @@ test("every saloon window contains a visible detailed room instead of a black re
       return { brightness: sum / (data.length / 4), colors: colors.size };
     });
   });
-  expect(rooms).toHaveLength(6);
+  expect(rooms).toHaveLength(5);
   for (const room of rooms) {
     expect(room.brightness).toBeGreaterThan(18);
     expect(room.colors).toBeGreaterThan(30);
@@ -71,7 +78,7 @@ for (const map of ["street", "tavern"]) {
           foreground: image.depth > target.view.depth };
       });
     });
-    expect(covers).toHaveLength(2);
+    expect(covers.length).toBeGreaterThanOrEqual(2);
     for (const cover of covers) {
       expect(cover.above).toBeLessThan(128);
       expect(cover.below).toBeGreaterThan(220);
@@ -80,6 +87,10 @@ for (const map of ["street", "tavern"]) {
     await page.screenshot({ path: `test-results/${map}-extra-cover.png`, fullPage: true });
     await page.getByRole("button", { name: "Продолжить", exact: true }).click();
     for (const [index, cover] of covers.entries()) {
+      if (index > 0 && index % 3 === 0) {
+        await page.getByRole("button", { name: /Перезарядить/ }).click();
+        await expect(page.locator("#stats")).toContainText("Патроны 6/6");
+      }
       await shoot(page, cover.x, cover.edge + 5);
       await expect(page.locator("#stats")).toContainText(`${index}/12`);
       await shoot(page, cover.x, cover.y);

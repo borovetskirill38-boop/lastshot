@@ -7,7 +7,7 @@ import streetTexture from "./visuals/street-dusk.webp?inline";
 import tavernTexture from "./visuals/tavern.webp?inline";
 import bossTexture from "./visuals/boss-encounter.webp?inline";
 import propTexture from "./visuals/cover-props.webp?inline";
-import { tavernCovers } from "./maps.js";
+import { maps } from "./maps.js";
 import { mapProps, propFrames } from "./props.js";
 
 type Graphics = Phaser.GameObjects.Graphics;
@@ -35,136 +35,58 @@ export function preloadArt(scene: Phaser.Scene) {
   scene.load.image("arsenal-models", arsenalModels);
 }
 
-/** Pre-rendered lighting and materials keep the detailed environment inexpensive. */
-export function drawTown(
-  scene: Phaser.Scene,
-  slots: { x: number; y: number }[],
-) {
-  if (!scene.textures.exists(sceneryKey)) {
-    const artwork = scene.textures
-      .get(townArtworkKey)
-      .getSourceImage() as HTMLImageElement;
+/** Uniform projection keeps the architecture and its room furniture undistorted. */
+function renderMap(scene: Phaser.Scene, mapId: "saloon" | "street" | "tavern") {
+  const map = maps.find((entry) => entry.id === mapId)!;
+  let background = mapId === "saloon" ? sceneryKey : mapId === "street" ? "street-dusk" : "tavern";
+  if (mapId === "saloon" && !scene.textures.exists(sceneryKey)) {
+    const artwork = scene.textures.get(townArtworkKey).getSourceImage() as HTMLImageElement;
     const baked = scene.textures.createCanvas(sceneryKey, 960, 540)!;
-    const context = baked.context;
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = "high";
-    // Align painted openings to the original hit/surface coordinates once at load.
-    // Source landmarks are measured on the 942-pixel-tall environment artwork.
-    const rows = [
-      [0, 0],
-      [70, 65],
-      [196, 137],
-      [280, 183],
-      [315, 195],
-      [468, 297],
-      [502, 309],
-      [545, 335],
-      [578, 347],
-      [735, 449],
-      [765, 461],
-      [805, 482],
-      [942, 540],
-    ];
-    for (let i = 1; i < rows.length; i++) {
-      const [fromY, toY] = rows[i - 1];
-      const [nextFrom, nextTo] = rows[i];
-      context.drawImage(
-        artwork,
-        0,
-        (fromY * artwork.height) / 942,
-        artwork.width,
-        ((nextFrom - fromY) * artwork.height) / 942,
-        0,
-        toY,
-        960,
-        nextTo - toY,
-      );
-    }
+    baked.context.imageSmoothingQuality = "high";
+    baked.context.drawImage(artwork, 0, 0, 960, 540);
     baked.refresh();
   }
-  const source = scene.textures.get(sceneryKey).getSourceImage();
-  const layers = [scene.add
-    .image(0, 0, sceneryKey)
-    .setOrigin(0)
-    .setDisplaySize(960, 540)
+  const artwork = scene.textures.get(background).getSourceImage() as HTMLImageElement;
+  const layers = [scene.add.image(0, 0, background).setOrigin(0).setDisplaySize(960, 540)
     .setDepth(-1).setName("map-background")];
-  // Foreground sills hide the waist edge so people stand inside the windows.
-  for (const slot of slots) {
-    layers.push(scene.add
-      .image(0, 0, sceneryKey)
-      .setOrigin(0)
-      .setDisplaySize(960, 540)
-      .setCrop(
-        ((slot.x - 70) * source.width) / 960,
-        ((slot.y + 44) * source.height) / 540,
-        (146 * source.width) / 960,
-        (14 * source.height) / 540,
-      )
-      .setDepth(15));
+  // Each painted obstacle gets its own depth, including the sloping bar and curved table.
+  for (const cover of map.paintedCovers) {
+    const left = Math.floor(Math.min(...cover.polygon.map(([x]) => x)));
+    const top = Math.floor(Math.min(...cover.polygon.map(([, y]) => y)));
+    const right = Math.ceil(Math.max(...cover.polygon.map(([x]) => x)));
+    const bottom = Math.ceil(Math.max(...cover.polygon.map(([, y]) => y)));
+    const key = `${mapId}-foreground-${cover.id}`;
+    if (!scene.textures.exists(key)) {
+      const texture = scene.textures.createCanvas(key, right - left, bottom - top)!;
+      const context = texture.context;
+      context.translate(-left, -top);
+      context.beginPath();
+      cover.polygon.forEach(([x, y], i) => i ? context.lineTo(x, y) : context.moveTo(x, y));
+      context.closePath();
+      context.clip();
+      context.drawImage(artwork, 0, 0, 960, 540);
+      texture.refresh();
+    }
+    layers.push(scene.add.image(left, top, key).setOrigin(0).setDepth(cover.depth)
+      .setName(`cover-${cover.id}`));
   }
-  return layers;
-}
-
-/** Restore the painted foreground over waists; the cover is also used for hits. */
-export function drawStreet(
-  scene: Phaser.Scene,
-  covers: { x: number; y: number; scale: number; coverY: number; prop?: string }[],
-) {
-  const key = "street-dusk";
-  const source = scene.textures.get(key).getSourceImage();
-  const layers = [scene.add.image(0, 0, key).setOrigin(0)
-    .setDisplaySize(960, 540).setDepth(-1).setName("map-background")];
-  for (const cover of covers) {
-    if (cover.prop) continue;
-    layers.push(scene.add.image(0, 0, key).setOrigin(0).setDisplaySize(960, 540)
-      .setCrop(
-        (cover.x - 60 * cover.scale) * source.width / 960,
-        cover.coverY * source.height / 540,
-        120 * cover.scale * source.width / 960,
-        (cover.y + 90 * cover.scale - cover.coverY) * source.height / 540,
-      ).setDepth(15));
-  }
-  layers.push(...drawProps(scene, "street"));
-  return layers;
-}
-
-/** Transparent furniture is itself the foreground mask; all maps reuse one atlas. */
-function drawProps(scene: Phaser.Scene, mapId: "street" | "tavern") {
   const texture = scene.textures.get("cover-props");
   for (const [name, [x, y, width, height]] of Object.entries(propFrames)) {
     if (!texture.has(name)) texture.add(name, 0, x, y, width, height);
   }
-  return mapProps[mapId].map((prop) => scene.add.image(prop.x, prop.y, "cover-props", prop.frame)
-    .setOrigin(0.5, 0).setDisplaySize(prop.width, prop.height)
-    .setDepth(25).setName(`cover-${prop.frame}`));
+  if (mapId !== "saloon") for (const prop of mapProps[mapId]) {
+    const image = scene.add.image(prop.x, prop.y, "cover-props", prop.frame)
+      .setOrigin(0.5, 0).setDisplaySize(prop.width, prop.height)
+      .setDepth(prop.depth).setName(`cover-${prop.id}`);
+    if (mapId === "street" && prop.frame === "crates") image.setTint(0xb9c2d6);
+    layers.push(image);
+  }
+  return layers;
 }
 
-/** Cache shaped foreground furniture once, without an extra mask per character. */
-export function drawTavern(scene: Phaser.Scene) {
-  const key = "tavern-foreground";
-  if (!scene.textures.exists(key)) {
-    const artwork = scene.textures.get("tavern").getSourceImage() as HTMLImageElement;
-    const texture = scene.textures.createCanvas(key, 960, 540)!;
-    const context = texture.context;
-    context.save();
-    context.beginPath();
-    for (const polygon of tavernCovers) {
-      context.moveTo(polygon[0][0], polygon[0][1]);
-      for (const [x, y] of polygon.slice(1)) context.lineTo(x, y);
-      context.closePath();
-    }
-    context.clip();
-    context.drawImage(artwork, 0, 0, 960, 540);
-    context.restore();
-    texture.refresh();
-  }
-  return [
-    scene.add.image(0, 0, "tavern").setOrigin(0).setDisplaySize(960, 540)
-      .setDepth(-1).setName("map-background"),
-    scene.add.image(0, 0, key).setOrigin(0).setDepth(15).setName("map-foreground"),
-    ...drawProps(scene, "tavern"),
-  ];
-}
+export function drawTown(scene: Phaser.Scene, _slots?: unknown[]) { return renderMap(scene, "saloon"); }
+export function drawStreet(scene: Phaser.Scene, _slots?: unknown[]) { return renderMap(scene, "street"); }
+export function drawTavern(scene: Phaser.Scene) { return renderMap(scene, "tavern"); }
 
 /** All appearances share one atlas; each role cycles without changing gameplay RNG. */
 export function createPerson(
@@ -229,7 +151,7 @@ export function createBoss(
   }
   const shadow = scene.add.ellipse(0, 42, appearance === "shield" ? 88 : 66, 10, 0x080d12, 0.48);
   const portrait = scene.add.image(0, 0, "boss-encounter", appearance)
-    .setOrigin(0.5, 0.58).setDisplaySize(108, 108).setTint(tint);
+    .setOrigin(0.5, 0.57).setDisplaySize(112, 112).setTint(tint);
   return scene.add.container(x, y, [shadow, portrait]).setScale(scale).setDepth(10)
     .setData({ appearance, boss: appearance !== "hostage", civilian: appearance === "hostage" });
 }
@@ -322,10 +244,10 @@ export class ViewWeapon {
       .setRotation(-0.68)
       .setBlendMode(Phaser.BlendModes.ADD)
       .setVisible(false);
-    this.view = scene.add.container(610, 530, [this.model, this.flash]).setDepth(100);
-    this.effects = scene.add.container(0, 0).setDepth(110);
-    this.smoke = scene.add.graphics().setDepth(105);
-    this.crosshair = scene.add.graphics().setDepth(120);
+    this.view = scene.add.container(610, 530, [this.model, this.flash]).setDepth(10000);
+    this.effects = scene.add.container(0, 0).setDepth(10010);
+    this.smoke = scene.add.graphics().setDepth(10005);
+    this.crosshair = scene.add.graphics().setDepth(10020);
     this.crosshair.lineStyle(3, 0x242a2c, 0.85).strokeCircle(0, 0, 11);
     this.crosshair.lineStyle(1, 0xffe9b3).strokeCircle(0, 0, 10);
     for (const [x, y, ex, ey] of [

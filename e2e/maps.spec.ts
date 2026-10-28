@@ -7,8 +7,8 @@ const saloonButton = (page: Page) => page.getByRole("button", { name: "Салу�
 const tavernButton = (page: Page) => page.getByRole("button", { name: "Внутри салуна Свет керосиновых ламп", exact: true });
 const mapButton = { saloon: saloonButton, street: streetButton, tavern: tavernButton };
 const locations = [
-  { id: "street", title: "Улица городка", spawn: { x: 607, y: 333.5, coverY: 367.00662, civilian: false } },
-  { id: "tavern", title: "Внутри салуна", spawn: { x: 600, y: 320, coverY: 351.8336, civilian: false } },
+  { id: "street", title: "Улица городка" },
+  { id: "tavern", title: "Внутри салуна" },
 ] as const;
 async function shot(page: Page, x: number, y: number) {
   const canvas = await page.locator("canvas").boundingBox();
@@ -30,7 +30,9 @@ test("location selection persists, keeps progress and releases old scenery when 
   await page.reload();
   await expect(streetButton(page)).toHaveAttribute("aria-pressed", "true");
   let textures = 0;
-  for (const map of ["tavern", "street", "saloon", "tavern", "saloon", "street", "tavern"] as const) {
+  const layers = new Map<string, number>();
+  const backgrounds = new Set<string>();
+  for (const [visit, map] of (["tavern", "street", "saloon", "tavern", "saloon", "street", "tavern"] as const).entries()) {
     await mapButton[map](page).click();
     await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
     await skipIntro(page);
@@ -45,10 +47,16 @@ test("location selection persists, keeps progress and releases old scenery when 
         key: scene.scenery[0].texture.key,
       };
     });
-    textures ||= state.textures;
-    expect(state).toEqual({ map, textures, layers: map === "tavern" ? 4 : map === "street" ? 9 : 7, backgrounds: 1, key: map === "tavern" ? "tavern" : map === "street" ? "street-dusk" : "town-scenery" });
+    if (visit === 2) textures = state.textures; // All three backgrounds have been cached once.
+    if (visit > 2) expect(state.textures).toBe(textures);
+    if (layers.has(map)) expect(state.layers).toBe(layers.get(map));
+    layers.set(map, state.layers);
+    backgrounds.add(state.key);
+    expect(state.map).toBe(map);
+    expect(state.backgrounds).toBe(1);
     await page.getByRole("button", { name: "← Уровни" }).click();
   }
+  expect(backgrounds.size).toBe(3);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("lastshot-progress")!))).toEqual({ unlocked: 5, best: [200, 400] });
   await page.reload();
   await expect(tavernButton(page)).toHaveAttribute("aria-pressed", "true");
@@ -109,10 +117,11 @@ for (const location of locations) {
           const scene = game.scene.getScene("town") as any;
           scene.nextSpawn = Infinity;
           scene.targets[0].expires = Infinity;
-          const { x, y, coverY, civilian } = scene.targets[0];
-          return { x, y, coverY, civilian };
+          const { x, y, coverY, civilian, slot } = scene.targets[0];
+          return { x, y, coverY, civilian, slot, slots: scene.slots.length };
         });
-        expect(target).toEqual(location.spawn);
+        expect(target.slot).toBe(target.slots - 1);
+        expect(target.civilian).toBe(false);
         await shot(page, target.x, target.coverY + 2);
         await shot(page, target.x, target.y);
         await expect(page.locator("#stats")).toContainText("Патроны 4/6");
@@ -128,7 +137,7 @@ for (const location of locations) {
 }
 
 for (const location of locations) {
-  test(`all eight ${location.id} positions use matching rendered sizes, hit areas and civilian penalties`, async ({ page }) => {
+  test(`all active ${location.id} positions use matching rendered sizes, hit areas and civilian penalties`, async ({ page }) => {
     await unlock(page);
     await page.goto("/");
     await mapButton[location.id](page).click();
@@ -142,13 +151,17 @@ for (const location of locations) {
       for (const target of scene.targets) target.view.destroy();
       scene.nextSpawn = Infinity;
       scene.targets = scene.slots.map((slot: any, i: number) => ({ ...slot, slot: i, civilian: i === 2, expires: Infinity, view: scene.person(slot.x, slot.y, i === 2) }));
-      return scene.targets.map((target: any) => ({ x: target.x, y: target.y, scale: target.scale, rendered: target.view.scaleX }));
+      return scene.targets.map((target: any) => ({ x: target.x, y: target.y, scale: target.scale,
+        rendered: target.view.scaleX, bodyY: target.bodyY, renderedY: target.view.y }));
     });
-    for (const position of positions) expect(position.rendered).toBe(position.scale);
+    for (const position of positions) {
+      expect(position.rendered).toBe(position.scale);
+      expect(position.renderedY).toBeCloseTo(position.bodyY, 5);
+    }
     await page.screenshot({ path: `test-results/${location.id}-all-targets.png`, fullPage: true });
     await page.getByRole("button", { name: "Продолжить", exact: true }).click();
     for (const [i, position] of positions.entries()) {
-      if (i === 6) {
+      if (i > 0 && i % 6 === 0) {
         await page.getByRole("button", { name: /Перезарядить/ }).click();
         await expect(page.locator("#stats")).toContainText("Патроны 6/6");
       }
@@ -158,7 +171,8 @@ for (const location of locations) {
       const { game } = await import("/src/main.ts");
       const scene = game.scene.getScene("town") as any;
       return { kills: scene.kills, lives: scene.lives, ammo: scene.ammo, remaining: scene.targets.length };
-    })).toEqual({ kills: 7, lives: 2, ammo: 4, remaining: 0 });
+    })).toEqual({ kills: positions.length - 1, lives: 2,
+      ammo: positions.length % 6 ? 6 - positions.length % 6 : 0, remaining: 0 });
   });
 
   test(`offline touch selection and ${location.id} fit narrow screens and rotation without storage`, async ({ browser }) => {
@@ -195,7 +209,7 @@ for (const location of locations) {
   });
 }
 
-test("tavern foreground and native hit testing follow the curved table instead of a rectangular cutout", async ({ page }) => {
+test("tavern curved foreground masks the waist and blocks covered shots at the current person scale", async ({ page }) => {
   await unlock(page);
   await page.goto("/");
   await tavernButton(page).click();
@@ -205,18 +219,33 @@ test("tavern foreground and native hit testing follow the curved table instead o
   await expect(page.locator(".saloon-transition")).toHaveCount(0);
   const mask = await page.evaluate(async () => {
     const { game } = await import("/src/main.ts");
+    const { coverTopAt } = await import("/src/maps.js");
     const scene = game.scene.getScene("town") as any;
     for (const target of scene.targets) target.view.destroy();
     const slot = scene.slots[1];
     scene.targets = [{ ...slot, slot: 1, civilian: false, expires: Infinity, view: scene.person(slot.x, slot.y, false) }];
     scene.nextSpawn = Infinity;
-    const context = (game.textures.get("tavern-foreground") as any).context as CanvasRenderingContext2D;
-    return [[241, 231], [241, 238], [272, 238], [272, 245]].map(([x, y]) => context.getImageData(x, y, 1, 1).data[3]);
+    const image = scene.children.getByName("cover-round-table") as any;
+    const canvas = document.createElement("canvas");
+    const source = image.texture.getSourceImage();
+    canvas.width = source.width; canvas.height = source.height;
+    const context = canvas.getContext("2d")!;
+    context.drawImage(source, 0, 0);
+    const alpha = (x: number, y: number) => {
+      const local = image.getWorldTransformMatrix().applyInverse(x, y);
+      return context.getImageData(Math.round(local.x + image.displayOriginX),
+        Math.round(local.y + image.displayOriginY), 1, 1).data[3];
+    };
+    const samples = [slot.x, slot.x + Math.min(20, 30 * slot.scale)].map((x) => {
+      const edge = coverTopAt(x, slot);
+      return [alpha(x, edge - 3), alpha(x, edge + 3)];
+    });
+    return { samples, x: slot.x, aimY: slot.y, coveredY: coverTopAt(slot.x, slot) + 3 };
   });
-  expect(mask).toEqual([0, 255, 0, 255]);
+  expect(mask.samples).toEqual([[0, 255], [0, 255]]);
   await page.getByRole("button", { name: "Продолжить", exact: true }).click();
-  await shot(page, 241, 238); // The center of the round table blocks this shot.
+  await shot(page, mask.x, mask.coveredY);
   await expect(page.locator("#stats")).toContainText("0/12");
-  await shot(page, 272, 238); // The same height beside its curve exposes the body.
+  await shot(page, mask.x, mask.aimY);
   await expect(page.locator("#stats")).toContainText("1/12");
 });

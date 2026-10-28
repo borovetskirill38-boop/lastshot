@@ -31,7 +31,7 @@ test("hostage phase blocks every part of the pair, preserves HP and allows safe 
   assert.equal(boss.tick(bossTiming.first), "appeared");
   assert.equal(boss.phase, "hostage");
   const p = boss.position;
-  for (const [x, y] of [[p.x, p.y], [p.x - 40, p.y - 30], [p.x + 40, p.y - 30]]) {
+  for (const [x, y] of [[p.x, p.y], [p.x - 30 * p.scale, p.y], [p.x + 30 * p.scale, p.y]]) {
     assert.equal(boss.fire(x, y, bossTiming.first), "hostage");
     assert.equal(boss.hp, 6);
   }

@@ -96,15 +96,16 @@ test("aim stays aligned and the run survives window resizing and orientation cha
       const { game } = await import("/src/main.ts");
       const s = game.scene.getScene("town") as any;
       for (const target of s.targets) target.view.destroy();
-      s.targets = [{ x: 230, y: 253, slot: 0, civilian: false, expires: Infinity, view: s.person(230, 253, false) }];
+      const position = s.slots[0];
+      s.targets = [{ ...position, slot: 0, civilian: false, expires: Infinity, view: s.person(position.x, position.y, false) }];
       s.nextSpawn = Infinity;
-      return { ammo: s.ammo, hits: s.kills, paused: s.paused };
+      return { ammo: s.ammo, hits: s.kills, paused: s.paused, x: position.x, y: position.y };
     });
-    expect(before).toEqual({ ammo: 6 - hits, hits, paused: true });
+    expect(before).toMatchObject({ ammo: 6 - hits, hits, paused: true });
     await page.getByRole("button", { name: "Продолжить", exact: true }).click();
     await settle(page);
     const canvas = await page.locator("canvas").boundingBox();
-    await page.mouse.click(canvas!.x + canvas!.width * 230 / 960, canvas!.y + canvas!.height * 253 / 540);
+    await page.mouse.click(canvas!.x + canvas!.width * before.x / 960, canvas!.y + canvas!.height * before.y / 540);
     hits++;
     await expect(page.locator("#stats")).toContainText(`Патроны ${6 - hits}/6`);
     const kills = await page.evaluate(async () => {

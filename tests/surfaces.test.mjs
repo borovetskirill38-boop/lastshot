@@ -2,25 +2,18 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { hitsWood } from "../src/surfaces.js";
 import { maps } from "../src/maps.js";
-const slots = [
-  { x: 230, y: 253 },
-  { x: 480, y: 253 },
-  { x: 730, y: 253 },
-  { x: 230, y: 405 },
-  { x: 480, y: 405 },
-  { x: 730, y: 405 },
-];
+const slots = maps[0].slots;
 test("visible wood: facade, frame, shutter, sign, porch, barrel and crate", () => {
   for (const [x, y] of [
-    [600, 320],
+    [600, 270],
     [177, 253],
     [158, 253],
     [480, 90],
     [450, 470],
     [53, 430],
-    [35, 480],
+    [900, 420],
     [450, 500],
-    [330, 450],
+    [350, 450],
   ])
     assert.equal(hitsWood(x, y, slots), true, `${x},${y}`);
 });
@@ -60,7 +53,7 @@ test("tavern furniture and planks sound wooden; glass, rugs and dark passage do 
   for (const [x, y] of [[700, 270], [241, 320], [365, 280], [475, 240], [151, 260], [480, 420], [360, 120]]) {
     assert.equal(hitsWood(x, y, tavern.slots, "tavern"), true, `${x},${y}`);
   }
-  for (const [x, y] of [[130, 150], [900, 100], [480, 180], [600, 285], [-1, 200], [NaN, 200]]) {
+  for (const [x, y] of [[130, 150], [900, 100], [480, 180], [50, 350], [-1, 200], [NaN, 200]]) {
     assert.equal(hitsWood(x, y, tavern.slots, "tavern"), false, `${x},${y}`);
   }
 });

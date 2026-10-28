@@ -7,6 +7,7 @@ import { IntroDialogue } from "./dialogue";
 import { getIntroDialogue } from "./dialogues.js";
 import { BossEncounter, bossTiming } from "./boss.js";
 import { hitsWood } from "./surfaces.js";
+import { occludedByCover } from "./occlusion.js";
 import { preloadArt, drawTown, drawStreet, drawTavern, createPerson, createBoss, ViewWeapon } from "./art";
 import { maps, readMap, hitsTarget } from "./maps.js";
 import { levels, readProgress, recordWin } from "./rules.js";
@@ -40,6 +41,8 @@ type Target = {
   expires: number;
   scale?: number;
   coverY?: number;
+  bodyY?: number;
+  pixelsPerMeter?: number;
   appearedAt?: number;
 };
 class Town extends Phaser.Scene {
@@ -99,8 +102,8 @@ class Town extends Phaser.Scene {
   }
   person(x: number, y: number, civilian: boolean, boss = false) {
     const position = this.slots.find((slot) => slot.x === x && slot.y === y);
-    const view = createPerson(this, x, y, civilian, boss, position?.scale ?? 1, this.map.tint);
-    if (position && "prop" in position) view.setDepth(20);
+    const view = createPerson(this, x, position?.bodyY ?? y, civilian, boss, position?.scale ?? 1, this.map.tint);
+    if (position) view.setDepth(position.pixelsPerMeter);
     return view;
   }
   begin() {
@@ -184,9 +187,9 @@ class Town extends Phaser.Scene {
     notice.textContent = phase === "defeated" ? "Сьюззи спасена!" : `Билли Пуля ${this.bossHP}/6 · ${action}`;
     if (phase === "hidden") return;
     const p = this.bossPosition;
-    this.bossView = createBoss(this, p.x, p.y, p.scale, this.map.tint,
+    this.bossView = createBoss(this, p.x, p.bodyY, p.scale, this.map.tint,
       phase === "hostage" ? "shield" : phase === "defeated" ? "hostage" : "boss");
-    if ("prop" in p) this.bossView.setDepth(20);
+    this.bossView.setDepth(p.pixelsPerMeter);
   }
   reload() {
     if (this.intro || this.ended || this.paused || this.reloading || this.ammo === this.capacity) return;
@@ -219,7 +222,7 @@ class Town extends Phaser.Scene {
       onComplete: () => flash.destroy(),
     });
     if (selected === 4) {
-      const hit = this.encounter.fire(x, y, this.clock);
+      const hit = this.encounter.fire(x, y, this.clock, this.map.occluders);
       if (hit === "hostage") {
         hitPerson = true;
         outcome = "civilian";
@@ -237,7 +240,9 @@ class Town extends Phaser.Scene {
         if (hit === "defeated") this.finish(true);
       }
     } else {
-      const t = this.targets.find((target) => hitsTarget(x, y, target));
+      const t = [...this.targets].sort((a, b) => (b.pixelsPerMeter ?? 0) - (a.pixelsPerMeter ?? 0))
+        .find((target) => hitsTarget(x, y, { ...target, bodyY: target.appearedAt !== undefined ? target.view.y : target.bodyY })
+          && !occludedByCover(x, y, target.pixelsPerMeter, this.map.occluders));
       if (t) {
         hitPerson = true;
         outcome = t.civilian ? "civilian" : "enemy";
@@ -320,7 +325,7 @@ class Town extends Phaser.Scene {
     for (const t of [...this.targets]) {
       if (t.appearedAt !== undefined) {
         const emergence = Math.min(1, (time - t.appearedAt) / 180);
-        t.view.y = t.y + 24 * (1 - emergence);
+        t.view.y = (t.bodyY ?? t.y) + 24 * (t.scale ?? 1) * (1 - emergence);
         t.view.alpha = 0.4 + emergence * 0.6;
       }
       if (time >= t.expires) {
@@ -345,7 +350,7 @@ class Town extends Phaser.Scene {
           s = this.slots[slot],
           civilian = Math.random() < levels[selected].civilians;
         const view = this.person(s.x, s.y, civilian);
-        if (this.map.emerge) view.setY(s.y + 24).setAlpha(0.4);
+        if (this.map.emerge) view.setY(s.bodyY + 24 * s.scale).setAlpha(0.4);
         this.targets.push({
           ...s,
           slot,

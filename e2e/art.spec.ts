@@ -11,9 +11,10 @@ test("people cycle distinct appearances, reuse their atlas and remain inside the
     const { game } = await import("/src/main.ts");
     const s = game.scene.getScene("town") as any;
     s.paused = true;
+    const position = s.slots[0];
     const textureCount = game.textures.getTextureKeys().length;
     const examine = (civilian: boolean, count: number) => Array.from({ length: count }, () => {
-      const view = s.person(480, 253, civilian);
+      const view = s.person(position.x, position.y, civilian);
       const image = view.list.find((c: any) => c.type === "Image");
       const details = {
         appearance: view.getData("appearance"),
@@ -27,7 +28,7 @@ test("people cycle distinct appearances, reuse their atlas and remain inside the
     });
     const bandits = examine(false, 6);
     const civilians = examine(true, 8);
-    const boss = s.person(480, 315, false, true);
+    const boss = s.person(position.x, position.y, false, true);
     const bossFrame = boss.getData("appearance");
     boss.destroy();
     return { bandits, civilians, bossFrame, textureCount, after: game.textures.getTextureKeys().length };

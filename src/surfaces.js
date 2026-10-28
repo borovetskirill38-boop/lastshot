@@ -1,4 +1,4 @@
-import { streetWood } from "./maps.js";
+import { streetWood, coverTopAt } from "./maps.js";
 import { mapProps } from "./props.js";
 
 function inPolygon(x, y, points) {
@@ -40,6 +40,8 @@ export function hitsWood(x, y, slots, mapId = "saloon") {
   if (
     slots.some(
       (s) => {
+        if (s.aperture) return x > s.aperture.left && x < s.aperture.right
+          && y > s.aperture.top && y < Math.min(s.aperture.bottom, coverTopAt(x, s));
         const scale = s.scale ?? 1;
         return x > s.x - 49 * scale && x < s.x + 49 * scale
           && y > s.y - 58 * scale && y < Math.min(s.y + 44 * scale, s.coverY ?? Infinity);
@@ -48,15 +50,14 @@ export function hitsWood(x, y, slots, mapId = "saloon") {
   )
     return false;
   return (
-    inRect(108, 109, 865, 455) ||
-    inRect(94, 111, 873, 147) ||
-    inRect(318, 58, 648, 130) ||
-    inRect(66, 458, 908, 482) ||
-    inRect(336, 482, 623, 518) || // New central wooden steps.
-    inRect(310, 417, 350, 515) ||
-    inRect(620, 417, 660, 515) || // Short porch handrails.
-    inRect(26, 392, 80, 464) ||
-    inRect(881, 405, 927, 467) ||
-    inRect(8, 452, 69, 506)
+    inRect(108, 80, 858, 432) ||
+    inRect(102, 56, 864, 98) ||
+    inRect(312, 20, 648, 100) ||
+    inRect(86, 430, 872, 466) ||
+    inRect(350, 466, 605, 512) ||
+    inRect(336, 370, 374, 508) ||
+    inRect(588, 370, 626, 508) ||
+    inRect(30, 385, 90, 465) ||
+    inRect(875, 385, 930, 458)
   );
 }

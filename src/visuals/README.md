@@ -7,9 +7,9 @@ background and 96 for the weapon; transparency is preserved. Playback
 and rendering require no external image server.
 
 - `town.webp`: sunlit saloon, weathered wood, iron barrel hoops, crate, dusty
-  ground and distant mesas. The six furnished window openings use the original game
-  layout: vertical artwork landmarks are aligned once into a cached 960×540
-  canvas texture. Foreground window sills are drawn over the character waists. The exterior now includes broad porch steps, handrails, lanterns, buckets, rope, flowers and a saddle. Upstairs openings show three distinct furnished bedrooms; downstairs show a kitchen, drinking hall and carved bar. Room detail is visible rather than black.
+  ground and distant mesas. Five furnished windows and a real entrance with batwing doors use measured
+  openings in `src/cameras.js`. The 16:9 image is uniformly drawn into a cached
+  960×540 texture; there is no strip-wise vertical warp. Foreground window sills are drawn over the character waists. The exterior now includes broad porch steps, handrails, lanterns, buckets, rope, flowers and a saddle. Upstairs openings show three distinct furnished bedrooms; downstairs show a kitchen, drinking hall and carved bar. Room detail is visible rather than black.
 - `people.webp`: transparent four-column, two-row atlas. Top row: mustached
   outlaw, bandolier outlaw, scarred outlaw, gang boss. Bottom row: shopkeeper,
   woman with basket, ranch worker with rope, young reader. The three bandits
@@ -63,8 +63,8 @@ embedded in the standalone HTML; no network is needed for the workshop.
 
 The street uses the same fixed 960×540 world as the saloon. Its target centers,
 distance scales, cover tops and boss position are measured in `src/maps.js`.
-Cached crops of the panorama at depth 15 mask the character waists at depth 10;
-hit testing uses those same cover tops. The upper-body sprites receive a subtle
+Cached crops of the panorama mask the character waists at measured physical
+depths; hit testing uses those same cover tops and nearer occluders. The upper-body sprites receive a subtle
 twilight tint. Spawn emergence uses game time, so pause freezes it. Changing maps
 destroys the old scenery objects while keeping shared textures loaded once.
 
@@ -80,8 +80,9 @@ destroys the old scenery objects while keeping shared textures loaded once.
 The original six target positions have measured scale, warm tint and cover
 profiles. The upper edges in `src/maps.js` define both the cached 960×540 alpha
 foreground and hit testing: a round table curves, and the bar slopes with
-perspective. The foreground texture is created once on the first interior visit;
-subsequent visits reuse it. Two scenery images restore the original room; two additional prop images add new foreground cover.
+perspective. Each foreground polygon is cached separately on the first interior visit;
+subsequent visits reuse it. Separate depths keep near tables in front of distant
+actors. Low decorative furniture is separated from active high crate cover.
 Emergence uses the existing pause-safe gameplay clock. All assets remain embedded
 in the standalone HTML, including the selector preview and menu background.
 
@@ -127,11 +128,29 @@ no new image is created at each appearance. All assets work in the standalone HT
   placement and the two extra spawn positions per map. Upper profiles come from
   the visible silhouette (alpha > 127), then transform into the fixed 960×540
   world. The same profiles stop covered shots and identify wooden impacts.
-- Existing furniture remains at depth 15. Characters at the new foreground
-  obstacles use depth 20, and the transparent props at depth 25 hide their waists.
-  Regular enemies, civilians and Billy with or without Suzzie share this rule.
+- World depth uses projected pixels per metre: nearer objects have greater depth.
+  Each cover draws just ahead of its own actor, and nearby cover also stops shots
+  at farther actors. Weapon, smoke, brass and reticle use layers 10000+ above all
+  world geometry. Enemies, civilians and Billy with Suzzie share this rule.
 - Each street/interior now has eight positions. All three menu previews are
   captured from actual game rendering without characters, weapons or crosshair.
 
 The saloon facade was edited from the original image with image generation,
-retaining all six window frame landmarks and the original noon lighting.
+retaining the original noon lighting and detailed rooms, with proper raised
+sills, two full-size storeys and a floor-level entrance. Floor planes and
+elevations produce equal scale on both floors; the upper-body sprite is not
+confused with an adult's full height.
+
+
+## Physical projection
+
+`src/projection.js` uses an adult height of 1.8m, a 1.05m upper-body sprite,
+and camera eye height 1.65m. Floor contact and floor elevation calibrate
+pixels-per-metre and distance. `bodyY` is the image anchor; `y` is a safe visible
+point above the cover. These remain separate even behind tall barriers.
+
+The street's trough and the room's chest remain normal low furniture with no
+spawn attached. Doorway crates, supply stacks and the handcart have plausible
+physical dimensions and at least 0.75m concealment. Original door openings no
+longer make a torso appear out of the floor. Artwork previews show the actual
+rendered scenery with the updated props and depth order.

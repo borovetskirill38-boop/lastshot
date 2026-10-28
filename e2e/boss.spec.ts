@@ -69,8 +69,8 @@ for (const map of maps) {
     await page.screenshot({ path: `test-results/hostage-${map.id}.png`, fullPage: true });
     await page.getByRole("button", { name: "Продолжить", exact: true }).click();
     const p = before.position;
-    await shoot(page, p.x - 25 * p.scale, p.y - 30 * p.scale); // Even the boss's side is protected.
-    await shoot(page, p.x + 20 * p.scale, p.y - 20 * p.scale); // Suzzie is visibly in front.
+    await shoot(page, p.x - 25 * p.scale, p.y); // Even the boss's side is protected.
+    await shoot(page, p.x + 20 * p.scale, p.y); // Suzzie is visibly in front.
     expect(await snapshot(page)).toMatchObject({ hp: 6, lives: 1, ammo: 4, score: 0, kills: 0 });
     await expect.poll(async () => (await snapshot(page)).phase, { timeout: 6000 }).toBe("exposed");
     const exposed = await snapshot(page);

@@ -1,4 +1,5 @@
 import { hitsTarget } from "./maps.js";
+import { occludedByCover } from "./occlusion.js";
 
 export const bossTiming = { first: 700, hidden: 650, hostage: 1500, exposed: 2200 };
 
@@ -38,10 +39,11 @@ export class BossEncounter {
     return attack ? "attack" : "retreated";
   }
 
-  fire(x, y, now) {
+  fire(x, y, now, occluders = []) {
     if (this.phase !== "exposed" && this.phase !== "hostage") return "miss";
     const target = { ...this.position, hitHalfWidth: this.phase === "hostage" ? 50 : 40 };
     if (!hitsTarget(x, y, target)) return "miss";
+    if (occludedByCover(x, y, target.pixelsPerMeter, occluders)) return "miss";
     if (this.phase === "hostage") return "hostage";
     this.hp--;
     if (this.hp === 0) {

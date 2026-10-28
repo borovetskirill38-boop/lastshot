@@ -73,9 +73,10 @@ test("hits, misses and civilian hits are counted once, ignore blocked shots and 
     s.nextSpawn = Infinity;
     for (const t of s.targets) t.view.destroy();
     s.targets = [];
-    const target = (civilian: boolean, expires = Infinity) => s.targets.push({ x: 230, y: 253, slot: 0, civilian, expires, view: { destroy() {} } });
-    target(false); s.shoot(230, 253);
-    target(true); s.shoot(230, 253);
+    const position = s.slots[0];
+    const target = (civilian: boolean, expires = Infinity) => s.targets.push({ ...position, slot: 0, civilian, expires, view: { destroy() {} } });
+    target(false); s.shoot(position.x, position.y);
+    target(true); s.shoot(position.x, position.y);
     s.shoot(20, 20);
     s.togglePause(); s.shoot(20, 20); s.togglePause();
     const ammo = s.ammo; s.ammo = 0; s.shoot(20, 20); s.ammo = ammo;
