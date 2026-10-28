@@ -4,6 +4,7 @@ import wood1 from "./audio/wood-1.mp3?inline";
 import wood2 from "./audio/wood-2.mp3?inline";
 import bossDeath from "./audio/bandit-death.mp3?inline";
 import menuMusic from "./audio/menu-music.mp3?inline";
+import arsenalMusic from "./audio/arsenal-music.mp3?inline";
 import menuAmbience from "./audio/menu-ambience.mp3?inline";
 import pain from "./audio/pain.mp3?inline";
 import door from "./audio/saloon-door.mp3?inline";
@@ -16,12 +17,15 @@ const clips = {
   wood2,
   bossDeath,
   menuMusic,
+  arsenalMusic,
   menuAmbience,
   pain,
   door,
   hover,
 };
 type Clip = keyof typeof clips;
+type MusicRoom = "menu" | "arsenal" | null;
+type BackgroundClip = "menuMusic" | "arsenalMusic" | "menuAmbience";
 export type SoundEffect =
   | "shot"
   | "reload"
@@ -79,10 +83,10 @@ export class GameAudio {
   private effectOutput?: DynamicsCompressorNode;
   private buffers = new Map<Clip, AudioBuffer>();
   private voices = new Set<Voice>();
-  private inMenu = true;
+  private room: MusicRoom = "menu";
   private hidden = false;
   private beds = new Map<
-    "menuMusic" | "menuAmbience",
+    BackgroundClip,
     { source: AudioBufferSourceNode; gain: GainNode }
   >();
   private lastClip = new Map<SoundEffect, Clip>();
@@ -96,7 +100,8 @@ export class GameAudio {
       loaded: this.buffers.size,
       active: this.voices.size,
       background: [...this.beds.keys()],
-      inMenu: this.inMenu,
+      inMenu: this.room === "menu",
+      room: this.room,
       hidden: this.hidden,
     };
   }
@@ -184,18 +189,23 @@ export class GameAudio {
     if (!blocked) this.syncMenu();
   }
   setMenu(inMenu: boolean) {
-    this.inMenu = inMenu;
+    this.setRoom(inMenu ? "menu" : null);
+  }
+  setRoom(room: MusicRoom) {
+    this.room = room;
     this.syncMenu();
   }
   private syncMenu() {
-    if (!this.inMenu || !this.enabled || this.failed) {
+    if (!this.room || !this.enabled || this.failed) {
       this.stopBeds();
       return;
     }
     const context = this.context,
       master = this.master;
     if (!context || !master || this.paused || this.hidden) return;
-    for (const clip of ["menuMusic", "menuAmbience"] as const) {
+    const wanted: BackgroundClip[] = this.room === "arsenal" ? ["arsenalMusic"] : ["menuMusic", "menuAmbience"];
+    for (const clip of this.beds.keys()) if (!wanted.includes(clip)) this.stopBed(clip);
+    for (const clip of wanted) {
       if (this.beds.has(clip)) continue;
       const buffer = this.buffers.get(clip);
       if (!buffer) continue;
@@ -207,7 +217,7 @@ export class GameAudio {
       gain.connect(master);
       gain.gain.setValueAtTime(0, context.currentTime);
       gain.gain.linearRampToValueAtTime(
-        clip === "menuMusic" ? 0.22 : 0.16,
+        clip === "menuAmbience" ? 0.16 : clip === "arsenalMusic" ? 0.26 : 0.3,
         context.currentTime + 0.6,
       );
       this.beds.set(clip, { source, gain });
@@ -215,14 +225,19 @@ export class GameAudio {
     }
   }
   private stopBeds() {
-    for (const { source, gain } of this.beds.values()) {
+    for (const clip of this.beds.keys()) this.stopBed(clip);
+  }
+  private stopBed(clip: BackgroundClip) {
+    const bed = this.beds.get(clip);
+    if (bed) {
+      const { source, gain } = bed;
       try {
         source.stop();
       } catch {}
       source.disconnect();
       gain.disconnect();
     }
-    this.beds.clear();
+    this.beds.delete(clip);
   }
   stop(kind?: SoundEffect) {
     if (!kind) this.stopBeds();

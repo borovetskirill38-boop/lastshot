@@ -4,29 +4,51 @@ All recordings are embedded in the standalone HTML. No network requests are
 needed for playback. Licenses below apply to the audio assets, not unrelated
 application code. No affiliation or endorsement by the credited sources is implied.
 
-## Full acoustic country recording — CC BY 4.0
+## Slow, dark music for the menu and workshop — CC BY 4.0
 
-**Corncob by Kevin MacLeod** (incompetech.com)
-Link: https://incompetech.filmmusic.io/song/3554-corncob
-Licensed under Creative Commons: By Attribution 4.0 License
+Both complete recordings are by **Kevin MacLeod** (incompetech.com), licensed
+under Creative Commons: By Attribution 4.0:
 https://creativecommons.org/licenses/by/4.0/
+Full license: LICENSE-CC-BY-4.0.txt. Attribution also appears inside the game.
 
-This is the complete approximately 54-second recording, with acoustic banjo
-picking and a drum-kit shuffle, not the previous Kenney chiptune loop. The source
-MP3 explicitly embeds the title, artist, ISRC `USUAN1100565`, the description
-"Bouncy country tune featuring fast banjo picking and grooving shuffle on the
-drumset", and the CC BY 4.0 license URL.
+### Main menu: Anguish
 
-Source mirror: adam-batson/garden-guardin, commit
-`da57a578eb640d1306f172d047474d53076cda9e`, file
-`src/assets/audio/music/corncob-by-kevin-macleod-from-filmmusic-io.mp3`:
-https://github.com/adam-batson/garden-guardin/blob/da57a578eb640d1306f172d047474d53076cda9e/src/assets/audio/music/corncob-by-kevin-macleod-from-filmmusic-io.mp3
-Original SHA-256: `9640aa7bd1dcedbb6862658215999046c73f1c8c33853e8afa3b74969e33dc14`.
+Source: https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400047
+A slow, somber guitar/harp/percussion piece, catalog tempo 54 BPM. The complete
+239-second recording replaces the former bright banjo song Corncob.
 
-Adaptation `menu-music.mp3`: the complete song is retained, attenuated by 6 dB
-for headroom and encoded as 44.1 kHz stereo / 256 kbit/s MP3. No cut, pitch change,
-bit-crushing or synthetic instrument layer is added. Attribution appears in the
-game. Full license: LICENSE-CC-BY-4.0.txt.
+Mirror: Sayshal/minstrel-packs-music-01, commit
+`ce4e1d1a517101aed56ea47d9f795a5be1d251cd`, `assets/audio/anguish.ogg`:
+https://github.com/Sayshal/minstrel-packs-music-01/blob/ce4e1d1a517101aed56ea47d9f795a5be1d251cd/assets/audio/anguish.ogg
+Original SHA-256: `bfdd9a912aac073ae42e6c6c0d5e934b2a0cea33fdefcbd87d6d95a34e31dc3c`.
+The source pack LICENSE explicitly licenses its music under CC BY 4.0;
+its unabridged attribution file is included as MUSIC-SOURCE-ATTRIBUTION.txt
+(only Anguish from that pack is used here).
+
+### Arsenal: Southern Gothic (slow workshop edit)
+
+Source: https://incompetech.com/music/royalty-free/index.html?isrc=USUAN2300004
+A dark country/folk recording with banjos, 12-string guitar, choir and percussion.
+The source MP3 tags identify Kevin MacLeod, title Southern Gothic, 126 BPM,
+year 2023 and ISRC USUAN2300004. The full 147-second recording is slowed with
+pitch-preserving `atempo=0.66666667`: 84 BPM, approximately 221 seconds.
+
+Mirror: noobsandnerdsgroup/audio, commit
+`24a545705ba6277d03c2c2d736048a72ff12d681`, `Southern Gothic.mp3`:
+https://github.com/noobsandnerdsgroup/audio/blob/24a545705ba6277d03c2c2d736048a72ff12d681/Southern%20Gothic.mp3
+Original SHA-256: `533074b8fabe8d5b4ab1c1588535eacf29e3f7e4a49fe9056162a8ce85324a16`.
+The mirror README provides track-specific Kevin MacLeod / CC BY 4.0 attribution.
+
+Adaptations `menu-music.mp3` and `arsenal-music.mp3`: complete recordings, no
+musical sections removed. Mono downmix before loudness normalization to -19 LUFS / -3 dBTP,
+80 ms entrance and 250 ms exit fades, mono 32 kHz / 96 kbit/s MP3 to limit offline file
+size and decoded memory. Only Southern Gothic changes tempo; pitch is preserved.
+The source tempo/instrument metadata was checked against the catalog at
+https://github.com/digitalforgeca/incompetech-royalty-free/blob/efe39b28b36c7a0c9f6510396b0cfddc87dd864a/pack.json
+
+The two music loops are selected by room. Menu ambience stops indoors; gameplay
+stops all background music. Re-entering a room cannot duplicate its loop.
+Hovering over the Arsenal button uses the existing reload recording below.
 
 ## Human cries — Flare contributors, CC BY-SA 3.0
 

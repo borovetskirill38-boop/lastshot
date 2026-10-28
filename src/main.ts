@@ -512,8 +512,8 @@ function updateMapPicker() {
 function menu() {
   introDialogue.close();
   gameAudio.stop();
-  gameAudio.setPaused(false);
   gameAudio.setMenu(!openingStory.active);
+  gameAudio.setPaused(false);
   scene.ended = true;
   scene.intro = false;
   el("play").hidden = true;
@@ -600,11 +600,18 @@ el("arsenal-open").onclick = () => {
   el("arsenal").hidden = false;
   document.body.classList.remove("in-menu", "in-play");
   document.body.classList.add("in-arsenal");
+  gameAudio.setRoom("arsenal");
   armory.open();
   window.scrollTo(0, 0);
   el("arsenal-title").focus({ preventScroll: true });
   gameAudio.play("door");
 };
+el<HTMLButtonElement>("arsenal-open").addEventListener("pointerenter", event => {
+  if (event.pointerType === "touch" || el<HTMLButtonElement>("arsenal-open").disabled ||
+    openingStory.active || el("menu").hidden) return;
+  gameAudio.stop("reload");
+  gameAudio.play("reload");
+});
 el("arsenal-back").onclick = () => {
   menu();
   el("arsenal-open").focus({ preventScroll: true });

@@ -51,17 +51,18 @@ test("recordings decode, produce an audio signal, and obey mute and voice limits
     gameAudio.play("shot");
     return { summaries, signal, active, muted: gameAudio.state };
   });
-  expect(result.summaries).toHaveLength(10);
+  expect(result.summaries).toHaveLength(11);
   for (const b of result.summaries) {
     expect(b.duration).toBeGreaterThan(b.name === "hover" ? 0.06 : 0.18);
-    expect(b.duration).toBeLessThan(60);
+    expect(b.duration).toBeLessThan(b.name.endsWith("Music") ? 600 : 60);
     expect(b.peak).toBeGreaterThan(0.005);
-    expect(b.peak).toBeLessThan(1);
+    expect(b.peak, b.name).toBeLessThan(1);
     expect(b.rms).toBeGreaterThan(0.001);
   }
   expect(
     result.summaries.find((b) => b.name === "menuMusic")!.duration,
-  ).toBeGreaterThan(50);
+  ).toBeGreaterThan(180);
+  expect(result.summaries.find(b => b.name === "arsenalMusic")!.duration).toBeGreaterThan(180);
   expect(result.signal).toBeGreaterThan(0.001);
   expect(result.active).toBeLessThanOrEqual(18);
   expect(result.muted.active).toBe(0);
@@ -228,7 +229,7 @@ test("unavailable Web Audio does not break shooting", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test("menu music and ambience are unique loops, stop for play, mute and hide, and return cleanly", async ({
+test("menu and arsenal have distinct music loops that stop for play, mute and hide", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -259,6 +260,28 @@ test("menu music and ambience are unique loops, stop for play, mute and hide, an
     expect(loop.loop).toBe(true);
     expect(loop.duration).toBeGreaterThan(10);
   }
+  await page.locator("#arsenal-open").click();
+  expect((await state()).background).toEqual(["arsenalMusic"]);
+  expect((await state()).room).toBe("arsenal");
+  const workshop = await page.evaluate(async () => {
+    const { gameAudio } = await import("/src/main.ts"); const a = gameAudio as any;
+    const source = a.beds.get("arsenalMusic").source;
+    gameAudio.setRoom("arsenal"); gameAudio.setRoom("arsenal");
+    return { sameSource: a.beds.get("arsenalMusic").source === source,
+      correctBuffer: source.buffer === a.buffers.get("arsenalMusic"),
+      differentMusic: source.buffer !== a.buffers.get("menuMusic"),
+      loop: source.loop, duration: source.buffer.duration, count: a.beds.size };
+  });
+  expect(workshop).toMatchObject({ sameSource: true, correctBuffer: true, differentMusic: true, loop: true, count: 1 });
+  expect(workshop.duration).toBeGreaterThan(215);
+  expect(workshop.duration).toBeLessThan(225);
+  await page.locator("#sound").click();
+  expect((await state()).background).toEqual([]);
+  await page.locator("#sound").click();
+  await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
+  expect((await state()).background).toEqual(["arsenalMusic"]);
+  await page.locator("#arsenal-back").click();
+  expect((await state()).background).toEqual(["menuMusic", "menuAmbience"]);
   await page.evaluate(() => {
     Object.defineProperty(document, "hidden", {
       configurable: true,
@@ -288,6 +311,37 @@ test("menu music and ambience are unique loops, stop for play, mute and hide, an
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   expect((await state()).background).toHaveLength(2);
   expect(errors).toEqual([]);
+});
+
+test("Arsenal hover plays reload once per entry, cancels stacked copies, and ignores touch hover", async ({ page }) => {
+  await page.goto("/"); await skipPrologue(page);
+  await page.locator("#sound").click();
+  await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
+  await page.evaluate(async () => {
+    const { gameAudio } = await import("/src/main.ts");
+    (window as any).arsenalCues = [];
+    const play = gameAudio.play.bind(gameAudio);
+    gameAudio.play = (kind, pan) => { (window as any).arsenalCues.push(kind); play(kind, pan); };
+  });
+  const cues = () => page.evaluate(() => (window as any).arsenalCues as string[]);
+  const button = page.locator("#arsenal-open");
+  await button.hover();
+  expect(await cues()).toEqual(["reload"]);
+  await button.locator("span").hover();
+  await button.locator("small").hover();
+  expect(await cues()).toEqual(["reload"]);
+  await page.locator("header > span").hover();
+  await button.hover();
+  expect(await cues()).toEqual(["reload", "reload"]);
+  const voices = await page.evaluate(async () => {
+    const { gameAudio } = await import("/src/main.ts");
+    return [...(gameAudio as any).voices].filter((v: any) => v.kind === "reload").length;
+  });
+  expect(voices).toBeLessThanOrEqual(1);
+  await button.dispatchEvent("pointerenter", { pointerType: "touch" });
+  expect(await cues()).toEqual(["reload", "reload"]);
+  await button.click();
+  expect((await cues()).at(-1)).toBe("door");
 });
 
 test("the same centered gun take overlaps every hit instead of replacing it", async ({
