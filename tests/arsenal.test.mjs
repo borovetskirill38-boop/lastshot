@@ -51,3 +51,31 @@ test("blocked storage and counter overflow do not break the current session", ()
   assert.equal(saveArsenal(blocked, state), false);
   assert.equal(arsenalKey, "lastshot-arsenal");
 });
+
+test("three-revolver saves gain new weapons without losing selection or existing totals", () => {
+  const legacy = { version: 1, selected: "long-watch", stats: {
+    "last-word": { hits: 14, misses: 5, civilianHits: 2 },
+    "dust-companion": { hits: 8, misses: 3, civilianHits: 1 },
+    "long-watch": { hits: 25, misses: 7, civilianHits: 0 },
+  } };
+  const state = readArsenal({ getItem: () => JSON.stringify(legacy) });
+  assert.equal(state.selected, legacy.selected);
+  for (const [id, row] of Object.entries(legacy.stats)) assert.deepEqual(state.stats[id], row);
+  for (const weapon of weapons.slice(3)) {
+    assert.deepEqual(state.stats[weapon.id], { hits: 0, misses: 0, civilianHits: 0 });
+  }
+});
+
+test("new long guns keep separate counters and selections after a storage round trip", () => {
+  let state = emptyArsenal();
+  for (const weapon of weapons.slice(3)) {
+    state = selectWeapon(state, weapon.id);
+    state = recordShot(recordShot(recordShot(state, weapon.id, "enemy"), weapon.id, "civilian"), weapon.id, "miss");
+    assert.equal(state.selected, weapon.id);
+    assert.deepEqual(state.stats[weapon.id], { hits: 2, misses: 1, civilianHits: 1 });
+  }
+  let saved;
+  saveArsenal({ setItem: (_, value) => { saved = value; } }, state);
+  assert.deepEqual(readArsenal({ getItem: () => saved }), state);
+  assert.deepEqual(state.stats[weapons[0].id], { hits: 0, misses: 0, civilianHits: 0 });
+});

@@ -52,6 +52,17 @@ Selection and statistics do not depend on artwork decoding or image pixels. The
 selected model and magazine capacity apply when a new run begins. Images remain
 embedded in the standalone HTML; no network is needed for the workshop.
 
+- `long-gun-models.webp`: original transparent 1254×1254, quality96 WebP, four
+  equal square frames: brass lever rifle, case-hardened single-shot rifle, short
+  coach shotgun and long silver-engraved hunting shotgun. Each has its own
+  first-person two-hand artwork and measured muzzle/breech anchors. Frames share
+  one preloaded texture; recoil, sway and case ejection follow gameplay time.
+- `long-gun-icons.webp`: matching original transparent 1254×1254 profile artwork
+  with four measured row boundaries 0, 385, 695, 958 and1254. SVG clipping keeps
+  complete stocks and barrels visible. All four names are fictional; historical
+  mechanisms were available by1886. Both shotguns use solid projectile cartridges
+  in this prototype. The same recorded gun/reload sounds are currently shared.
+
 ## Twilight street
 
 - `street-dusk.webp`: original AI-generated 1672×941 panorama, WebP quality 94.

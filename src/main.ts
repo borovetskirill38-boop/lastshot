@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import "./style.css";
 import { GameAudio } from "./audio";
 import { Armory } from "./armory";
+import { getWeapon } from "./arsenal.js";
 import { observeGameLayout } from "./layout";
 import { IntroDialogue } from "./dialogue";
 import { OpeningStory } from "./prologue";
@@ -196,7 +197,8 @@ class Town extends Phaser.Scene {
   reload() {
     if (this.intro || this.ended || this.paused || this.reloading || this.ammo === this.capacity) return;
     this.reloading = true;
-    this.reloadEnd = this.clock + 1100;
+    this.reloadEnd = this.clock + getWeapon(this.weaponId).reloadMs;
+    this.weapon.reload(this.capacity - this.ammo);
     gameAudio.play("reload");
     el("reload").textContent = "Перезарядка…";
   }

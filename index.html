@@ -72,19 +72,26 @@
             <article class="weapon-details" aria-labelledby="weapon-name">
               <p id="weapon-kind" class="weapon-kind"></p>
               <h2 id="weapon-name"></h2>
-              <div id="weapon-preview" class="weapon-icon" role="img" aria-label="Реалистичное изображение выбранного револьвера"></div>
+              <div id="weapon-preview" class="weapon-icon" role="img" aria-label="Реалистичное изображение выбранного оружия"></div>
               <p id="weapon-description"></p>
+              <dl class="weapon-specifications">
+                <div><dt>Патрон</dt><dd id="weapon-cartridge"></dd></div>
+                <div><dt>Механизм</dt><dd id="weapon-mechanism"></dd></div>
+                <div><dt>Перезарядка</dt><dd id="weapon-reload"></dd></div>
+                <div><dt>Отдача</dt><dd id="weapon-recoil"></dd></div>
+              </dl>
               <dl class="weapon-statistics">
                 <div><dt>Всего попаданий</dt><dd id="weapon-hits">0</dd></div>
                 <div><dt>Промахи</dt><dd id="weapon-misses">0</dd></div>
                 <div><dt>По мирным жителям</dt><dd id="weapon-civilians">0</dd></div>
-                <div><dt>Патронов в барабане</dt><dd id="weapon-capacity">6</dd></div>
+                <div><dt>Вместимость оружия</dt><dd id="weapon-capacity">6</dd></div>
               </dl>
               <div class="equip-row">
                 <button id="equip-weapon">Оружие выбрано</button>
                 <p id="arsenal-feedback" role="status"></p>
               </div>
               <p id="arsenal-save-note"></p>
+              <p class="arsenal-ammo-note">Резерв патронов не ограничен. Вместимость определяет число выстрелов до перезарядки.</p>
             </article>
           </div>
         </section>

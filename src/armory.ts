@@ -1,11 +1,15 @@
 import { getWeapon, weapons, readArsenal, selectWeapon, recordShot, saveArsenal } from "./arsenal.js";
 import weaponIcons from "./visuals/weapon-icons.webp?inline";
+import longGunIcons from "./visuals/long-gun-icons.webp?inline";
 
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
 // Measured atlas rows keep the full grips visible without stretching the artwork.
-const iconRows = [{ top: 0, height: 500 }, { top: 500, height: 380 }, { top: 880, height: 374 }];
+const iconRows = [{ top: 0, height: 500 }, { top: 500, height: 380 }, { top: 880, height: 374 },
+  { top: 0, height: 385 }, { top: 385, height: 310 }, { top: 695, height: 263 }, { top: 958, height: 296 }];
 let iconNumber = 0;
+const roundNames = { one: "ПАТРОН", few: "ПАТРОНА", many: "ПАТРОНОВ", other: "ПАТРОНОВ" };
+const roundPlural = new Intl.PluralRules("ru-RU");
 function weaponIcon(index: number) {
   const ns = "http://www.w3.org/2000/svg";
   const { top, height } = iconRows[index];
@@ -22,7 +26,7 @@ function weaponIcon(index: number) {
   clip.append(rect);
   defs.append(clip);
   const image = document.createElementNS(ns, "image");
-  image.setAttribute("href", weaponIcons);
+  image.setAttribute("href", index < 3 ? weaponIcons : longGunIcons);
   image.setAttribute("width", "1254");
   image.setAttribute("height", "1254");
   image.setAttribute("clip-path", `url(#${clip.id})`);
@@ -88,12 +92,17 @@ export class Armory {
       card.classList.toggle("is-inspected", item.id === weapon.id);
       card.setAttribute("aria-pressed", String(item.id === weapon.id));
       card.querySelector("small")!.textContent = item.id === this.state.selected
-        ? "В РУКАХ" : `${item.capacity} ПАТРОНОВ`;
+        ? "В РУКАХ" : `${item.capacity} ${roundNames[roundPlural.select(item.capacity) as keyof typeof roundNames]}`;
     }
     el("weapon-name").textContent = weapon.name;
     el("weapon-kind").textContent = weapon.kind;
     el("weapon-description").textContent = weapon.description;
     el("weapon-preview").replaceChildren(weaponIcon(weapon.icon));
+    el("weapon-preview").setAttribute("aria-label", `${weapon.kind}: ${weapon.name}`);
+    el("weapon-cartridge").textContent = weapon.cartridge;
+    el("weapon-mechanism").textContent = weapon.mechanism;
+    el("weapon-reload").textContent = `${(weapon.reloadMs / 1000).toLocaleString("ru-RU")} с`;
+    el("weapon-recoil").textContent = `×${weapon.recoil.toLocaleString("ru-RU")} от базовой`;
     el("weapon-hits").textContent = String(stats.hits);
     el("weapon-misses").textContent = String(stats.misses);
     el("weapon-civilians").textContent = String(stats.civilianHits);

@@ -3,12 +3,14 @@ import townTexture from "./visuals/town.webp?inline";
 import peopleTexture from "./visuals/people.webp?inline";
 import weaponTexture from "./visuals/revolver-hand.webp?inline";
 import arsenalModels from "./visuals/arsenal-models.webp?inline";
+import longGunModels from "./visuals/long-gun-models.webp?inline";
 import streetTexture from "./visuals/street-dusk.webp?inline";
 import tavernTexture from "./visuals/tavern.webp?inline";
 import bossTexture from "./visuals/boss-encounter.webp?inline";
 import propTexture from "./visuals/cover-props.webp?inline";
 import { maps } from "./maps.js";
 import { mapProps, propFrames } from "./props.js";
+import { getWeapon } from "./arsenal.js";
 
 type Graphics = Phaser.GameObjects.Graphics;
 const townArtworkKey = "town-artwork";
@@ -33,6 +35,7 @@ export function preloadArt(scene: Phaser.Scene) {
   scene.load.image(peopleKey, peopleTexture);
   scene.load.image("revolver-hand", weaponTexture);
   scene.load.image("arsenal-models", arsenalModels);
+  scene.load.image("long-gun-models", longGunModels);
 }
 
 /** Uniform projection keeps the architecture and its room furniture undistorted. */
@@ -218,6 +221,10 @@ export class ViewWeapon {
   private readonly muzzleLocal = new Phaser.Math.Vector2(-18, -172);
   private readonly cylinderLocal = new Phaser.Math.Vector2(25, -111);
   private age = 0;
+  private weaponId = "last-word";
+  private recoilStrength = 1;
+  private longGun = false;
+  private shotgun = false;
   readonly smoke: Graphics;
   readonly effects: Phaser.GameObjects.Container;
   aimX = 480;
@@ -260,12 +267,43 @@ export class ViewWeapon {
     this.reset();
   }
   setWeapon(weaponId: string) {
+    const weapon = getWeapon(weaponId);
+    weaponId = this.weaponId = weapon.id;
+    this.recoilStrength = weapon.recoil;
+    this.longGun = weapon.icon >= 3;
+    this.shotgun = weapon.model === "coach" || weapon.model === "hunting";
     if (weaponId === "last-word") {
       this.model.setTexture("revolver-hand")
         .setPosition(25, -2).setOrigin(0.5, 0.78).setDisplaySize((250 * 2) / 3, 250);
       this.muzzleLocal.set(-18, -172);
       this.cylinderLocal.set(25, -111);
       this.flash.setRotation(-0.68);
+    } else if (this.longGun) {
+      const texture = this.scene.textures.get("long-gun-models");
+      const source = texture.getSourceImage();
+      const halfWidth = source.width / 2, halfHeight = source.height / 2;
+      const frames = ["trail", "buffalo", "coach", "hunting"];
+      if (!texture.has("trail")) {
+        frames.forEach((name, i) => texture.add(name, 0, (i % 2) * halfWidth,
+          Math.floor(i / 2) * halfHeight, halfWidth, halfHeight));
+      }
+      // Pixel measurements in each 627×627 cell; alpha bounds include both hands.
+      const profiles: Record<string, { size: number; muzzle: [number, number]; breech: [number, number] }> = {
+        trail: { size: 350, muzzle: [38, 47], breech: [405, 284] },
+        buffalo: { size: 370, muzzle: [37, 44], breech: [381, 272] },
+        coach: { size: 310, muzzle: [48, 55], breech: [365, 330] },
+        hunting: { size: 370, muzzle: [34, 34], breech: [371, 296] },
+      };
+      const profile = profiles[weapon.model];
+      this.model.setTexture("long-gun-models", weapon.model)
+        .setPosition(20, 20).setOrigin(0.5, 0.78).setDisplaySize(profile.size, profile.size);
+      const anchor = ([x, y]: [number, number]) => [
+        20 + (x / halfWidth - 0.5) * profile.size,
+        20 + (y / halfHeight - 0.78) * profile.size,
+      ] as const;
+      this.muzzleLocal.set(...anchor(profile.muzzle));
+      this.cylinderLocal.set(...anchor(profile.breech));
+      this.flash.setRotation(-0.85);
     } else {
       const texture = this.scene.textures.get("arsenal-models");
       const source = texture.getSourceImage();
@@ -315,12 +353,22 @@ export class ViewWeapon {
     this.recoil = 1;
     this.flashRemaining = 95;
     this.smokeAge = 0;
-    this.flash.setVisible(true).setScale(0.85).setAlpha(1);
+    this.flash.setVisible(true).setScale(0.85 * this.recoilStrength).setAlpha(1);
     this.model.setTint(0xffebcf);
+    // Lever action ejects while cycling; single-shot and break-action cases stay
+    // in their chambers until the player starts a reload.
+    if (!this.longGun || this.weaponId === "dust-trail") this.ejectCase();
+  }
+  reload(spent: number) {
+    if (!this.longGun || this.weaponId === "dust-trail") return;
+    for (let i = 0; i < Math.min(spent, 2); i++) this.ejectCase();
+  }
+  private ejectCase() {
     const p = this.view
       .getWorldTransformMatrix()
       .transformPoint(this.cylinderLocal.x, this.cylinderLocal.y);
-    const casing = this.scene.add.image(0, 0, "weapon-brass").setDisplaySize(17, 6);
+    const casing = this.scene.add.image(0, 0, "weapon-brass")
+      .setDisplaySize(this.shotgun ? 21 : this.longGun ? 22 : 17, this.shotgun ? 8 : 6);
     const view = this.scene.add.container(p.x, p.y, [casing]);
     this.effects.add(view);
     this.shells.push({
@@ -338,12 +386,12 @@ export class ViewWeapon {
     this.flashRemaining = Math.max(0, this.flashRemaining - delta);
     this.flash
       .setVisible(this.flashRemaining > 0)
-      .setScale(0.6 + (0.25 * this.flashRemaining) / 95)
+      .setScale((0.6 + (0.25 * this.flashRemaining) / 95) * this.recoilStrength)
       .setAlpha(this.flashRemaining / 95);
     this.model.setTint(this.flashRemaining > 55 ? 0xffebcf : 0xffffff);
     this.smokeAge += delta;
     const targetX =
-      610 + (this.aimX - 480) * 0.075 + Math.sin(this.age * 1.7) * 0.8;
+      610 + (this.aimX - 480) * (this.longGun ? 0.055 : 0.075) + Math.sin(this.age * 1.7) * 0.8;
     const targetY =
       530 +
       (this.aimY - 270) * 0.018 +
@@ -354,10 +402,10 @@ export class ViewWeapon {
     this.view.y = Phaser.Math.Linear(this.view.y, targetY, smooth);
     this.view.rotation =
       (this.aimX - 480) * 0.00016 -
-      this.recoil * 0.13 +
+      this.recoil * 0.13 * this.recoilStrength +
       Math.sin(this.age * 1.4) * 0.002 +
       (reloading ? 0.28 : 0);
-    this.view.setScale(0.9 + this.recoil * 0.03);
+    this.view.setScale(0.9 + this.recoil * 0.03 * this.recoilStrength);
     this.crosshair
       .setPosition(this.aimX, this.aimY)
       .setAlpha(reloading ? 0.3 : 1);
