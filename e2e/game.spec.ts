@@ -126,7 +126,9 @@ test("boss takes six hits and campaign completes", async ({ page }) => {
   await expect.poll(() => scene(page, "s=>s.bossOpen")).toBe(true);
   for (let i = 0; i < 6; i++) {
     await expect
-      .poll(() => scene(page, "s=>s.bossOpen && s.encounter.nextAt-s.clock>500"), { timeout: 6000 })
+      // Two consecutive hostage poses last almost five seconds before he opens;
+      // observe that short opening frequently rather than with 1-second gaps.
+      .poll(() => scene(page, "s=>s.bossOpen && s.encounter.nextAt-s.clock>500"), { timeout: 10000, intervals: [50] })
       .toBe(true);
     const position = await scene<{ x: number; y: number }>(page, "s=>s.bossPosition");
     await shoot(page, position.x, position.y);

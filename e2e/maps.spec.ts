@@ -45,7 +45,7 @@ test("location selection persists, keeps progress and releases old scenery when 
       return {
         map: scene.map.id, textures: game.textures.getTextureKeys().length,
         layers: scene.scenery.length,
-        backgrounds: scene.children.list.filter((child: any) => child.name === "map-background").length,
+        backgrounds: scene.world.list.filter((child: any) => child.name === "map-background").length,
         key: scene.scenery[0].texture.key,
       };
     });
@@ -232,7 +232,7 @@ test("tavern curved foreground masks the waist and blocks covered shots at the c
     const slot = scene.slots[1];
     scene.targets = [{ ...slot, slot: 1, civilian: false, expires: Infinity, view: scene.person(slot.x, slot.y, false) }];
     scene.nextSpawn = Infinity;
-    const image = scene.children.getByName("cover-round-table") as any;
+    const image = scene.world.getByName("cover-round-table") as any;
     const canvas = document.createElement("canvas");
     const source = image.texture.getSourceImage();
     canvas.width = source.width; canvas.height = source.height;

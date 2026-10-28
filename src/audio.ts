@@ -31,7 +31,9 @@ export type SoundEffect =
   | "civilianDeath"
   | "pain"
   | "door"
-  | "hover";
+  | "hover"
+  | "enemyShot"
+  | "playerHurt";
 const variants: Record<SoundEffect, Clip[]> = {
   shot: ["shot"],
   reload: ["reload"],
@@ -42,6 +44,8 @@ const variants: Record<SoundEffect, Clip[]> = {
   pain: ["pain"],
   door: ["door"],
   hover: ["hover"],
+  enemyShot: ["shot"],
+  playerHurt: ["pain"],
 };
 const volumes: Record<SoundEffect, number> = {
   shot: 0.48,
@@ -53,6 +57,8 @@ const volumes: Record<SoundEffect, number> = {
   pain: 0.55,
   door: 0.48,
   hover: 0.15,
+  enemyShot: 0.32,
+  playerHurt: 0.6,
 };
 type Voice = {
   kind: SoundEffect;
@@ -274,13 +280,13 @@ export class GameAudio {
     // Civilians share the boss hurt recording, raised by two semitones.
     // Boss voices and the fixed gun take retain their original pitch.
     source.playbackRate.value =
-      kind === "civilianDeath"
+      kind === "playerHurt" ? 2 ** (-3 / 12) : kind === "civilianDeath"
         ? 2 ** (2 / 12)
         : kind === "wood"
           ? 0.98 + Math.random() * 0.04
           : 1;
     const start = context.currentTime;
-    const output = kind === "shot" ? this.shotOutput! : this.effectOutput!;
+    const output = kind === "shot" || kind === "enemyShot" ? this.shotOutput! : this.effectOutput!;
     gain.gain.setValueAtTime(0, start);
     gain.gain.linearRampToValueAtTime(volumes[kind], start + 0.002);
     const pan =

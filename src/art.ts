@@ -4,6 +4,8 @@ import peopleTexture from "./visuals/people.webp?inline";
 import weaponTexture from "./visuals/revolver-hand.webp?inline";
 import arsenalModels from "./visuals/arsenal-models.webp?inline";
 import longGunModels from "./visuals/long-gun-models.webp?inline";
+import enemyCombat from "./visuals/enemy-combat.webp?inline";
+import playerCoverArt from "./visuals/player-covers.webp?inline";
 import streetTexture from "./visuals/street-dusk.webp?inline";
 import tavernTexture from "./visuals/tavern.webp?inline";
 import bossTexture from "./visuals/boss-encounter.webp?inline";
@@ -36,6 +38,8 @@ export function preloadArt(scene: Phaser.Scene) {
   scene.load.image("revolver-hand", weaponTexture);
   scene.load.image("arsenal-models", arsenalModels);
   scene.load.image("long-gun-models", longGunModels);
+  scene.load.image("enemy-combat", enemyCombat);
+  scene.load.image("player-covers", playerCoverArt);
 }
 
 /** Uniform projection keeps the architecture and its room furniture undistorted. */
@@ -230,6 +234,7 @@ export class ViewWeapon {
   aimX = 480;
   aimY = 270;
   recoil = 0;
+  coverAmount = 0;
   flashRemaining = 0;
   smokeAge = 1000;
   shells: {
@@ -334,6 +339,7 @@ export class ViewWeapon {
   }
   reset() {
     this.recoil = 0;
+    this.coverAmount = 0;
     this.age = 0;
     this.flashRemaining = 0;
     this.smokeAge = 1000;
@@ -396,6 +402,7 @@ export class ViewWeapon {
       530 +
       (this.aimY - 270) * 0.018 +
       Math.sin(this.age * 1.4) * 1.1 +
+      this.coverAmount * 180 +
       (reloading ? 95 : 0);
     const smooth = delta === 0 ? 1 : 1 - Math.exp(-dt * 14);
     this.view.x = Phaser.Math.Linear(this.view.x, targetX, smooth);
@@ -408,7 +415,7 @@ export class ViewWeapon {
     this.view.setScale(0.9 + this.recoil * 0.03 * this.recoilStrength);
     this.crosshair
       .setPosition(this.aimX, this.aimY)
-      .setAlpha(reloading ? 0.3 : 1);
+      .setAlpha(this.coverAmount > 0.1 ? 0.15 : reloading ? 0.3 : 1);
     this.smoke.clear();
     if (this.smokeAge < 600) {
       const p = this.muzzle(),

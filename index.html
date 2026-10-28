@@ -51,7 +51,9 @@
           <div id="levels"></div>
           <p class="instructions">
             Стреляй по бандитам в красных платках. Береги жителей в зелёном.<br />Клик
-            / касание — выстрел · R — перезарядка · Esc — пауза
+            / касание — выстрел · R — перезарядка · Esc — пауза.<br />
+            A/D или ←/→ — сменить укрытие · S/↓ — пригнуться · W/↑ — выглянуть.
+            Бандит поднимает оружие — успей укрыться или сменить позицию!
           </p>
         </section>
         <section id="arsenal" hidden aria-labelledby="arsenal-title">
@@ -100,9 +102,10 @@
             <span id="level-name"></span
             ><span id="stats" aria-live="polite"></span>
           </div>
-          <p class="loadout-readout"><span id="equipped-name"></span><span id="boss-notice" role="status" hidden></span></p>
+          <p class="loadout-readout"><span id="equipped-name"></span><span id="cover-status" role="status"></span><span id="boss-notice" role="status" hidden></span></p>
           <div id="game-viewport">
             <div id="game">
+              <div id="threat-notice" role="status" hidden></div>
               <div id="combat-ui" aria-hidden="true">
                 <div id="status-belt">
                   <div id="life-belt">
@@ -121,6 +124,12 @@
           <div class="controls">
             <button id="back">← Уровни</button><button id="pause">Пауза</button
             ><button id="reload">Перезарядить · R</button>
+            <div class="movement-controls" role="group" aria-label="Перемещение и укрытие">
+              <button id="move-left" aria-label="Влево к укрытию">← <small>A</small></button>
+              <button id="crouch" aria-label="Пригнуться за укрытие" aria-pressed="false">↓ Укрыться <small>S</small></button>
+              <button id="peek" aria-label="Выглянуть из укрытия">↑ Выглянуть <small>W</small></button>
+              <button id="move-right" aria-label="Вправо к укрытию">→ <small>D</small></button>
+            </div>
           </div>
         </section>
         <section id="result" hidden aria-live="polite">

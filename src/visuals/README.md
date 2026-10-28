@@ -1,5 +1,19 @@
 # Western environment and character artwork
 
+## Cover combat
+
+- `enemy-combat.webp`: original transparent1448×1086 atlas, four rows (mustache,
+  bandolier, scar, Billy) and four poses (lowered gun, raising, aimed at viewer,
+  recoil). Existing character art provided appearance references. Pose frames,
+  shoulder motion, timed muzzle flash and warning arcs use gameplay time.
+- `player-covers.webp`: original transparent2172×724 props: oak barrels,
+  freight wagon and overturned saloon table. Measured cropped frames avoid
+  gutters; existing crate artwork completes the nine map-specific positions.
+- Scenery and actors share one transformed world container; viewmodel, foreground
+  player cover, tracers and hurt border use separate fixed screen layers. Native
+  pointer input is transformed back into world coordinates for cover/hit tests.
+  Both new atlases are embedded inline in the standalone HTML (quality94 WebP).
+
 Original AI-generated artwork created for this project. Images are embedded as
 inline data URLs by Vite and are also included in the standalone HTML. WebP
 encoding uses quality 94 for the town, people and doors, 92 for the menu

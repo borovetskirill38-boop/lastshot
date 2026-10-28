@@ -13,6 +13,8 @@ import { occludedByCover } from "./occlusion.js";
 import { preloadArt, drawTown, drawStreet, drawTavern, createPerson, createBoss, ViewWeapon } from "./art";
 import { maps, readMap, hitsTarget } from "./maps.js";
 import { levels, readProgress, recordWin } from "./rules.js";
+import { CoverMovement, playerCovers, planAttack, tickAttack, combatTiming } from "./combat.js";
+import { CombatView, animateGunman } from "./combat-view";
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
 let storage: Storage;
@@ -47,9 +49,16 @@ type Target = {
   bodyY?: number;
   pixelsPerMeter?: number;
   appearedAt?: number;
+  attack?: ReturnType<typeof planAttack>;
 };
 class Town extends Phaser.Scene {
   weapon!: ViewWeapon;
+  world!: Phaser.GameObjects.Container;
+  combatView!: CombatView;
+  movement = new CoverMovement();
+  hurtUntil = 0;
+  bossAimLane = 1;
+  bossRecoilUntil = 0;
   clock = 0;
   targets: Target[] = [];
   weaponId = armory.equipped.id;
@@ -79,16 +88,27 @@ class Town extends Phaser.Scene {
     preloadArt(this);
   }
   create() {
+    this.world = this.add.container(0, 0);
     this.drawTown();
+    this.combatView = new CombatView(this);
     this.weapon = new ViewWeapon(this);
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
       if (!this.ended && !this.paused && !this.intro) this.weapon.aim(p.x, p.y);
     });
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
-      this.shoot(p.x, p.y);
+      const point = this.world.getWorldTransformMatrix().applyInverse(p.x, p.y);
+      this.shoot(point.x, point.y);
     });
     this.input.keyboard?.on("keydown-R", () => this.reload());
     this.input.keyboard?.on("keydown-ESC", () => this.togglePause());
+    this.input.keyboard?.on("keydown", (event: KeyboardEvent) => {
+      if (event.repeat || this.intro || this.ended || this.paused) return;
+      if (["KeyA", "ArrowLeft", "KeyD", "ArrowRight", "KeyS", "ArrowDown", "KeyW", "ArrowUp"].includes(event.code)) event.preventDefault();
+      if (["KeyA", "ArrowLeft"].includes(event.code)) this.move(-1);
+      if (["KeyD", "ArrowRight"].includes(event.code)) this.move(1);
+      if (["KeyS", "ArrowDown"].includes(event.code)) this.stance(true);
+      if (["KeyW", "ArrowUp"].includes(event.code)) this.stance(false);
+    });
     this.game.events.on("blur", () => {
       if (!this.ended && !this.paused) this.togglePause();
     });
@@ -102,11 +122,13 @@ class Town extends Phaser.Scene {
       : this.map.id === "street"
         ? drawStreet(this, this.slots)
         : drawTavern(this);
+    this.world.add(this.scenery).sort("depth");
   }
   person(x: number, y: number, civilian: boolean, boss = false) {
     const position = this.slots.find((slot) => slot.x === x && slot.y === y);
     const view = createPerson(this, x, position?.bodyY ?? y, civilian, boss, position?.scale ?? 1, this.map.tint);
     if (position) view.setDepth(position.pixelsPerMeter);
+    this.world.add(view).sort("depth");
     return view;
   }
   begin() {
@@ -127,6 +149,11 @@ class Town extends Phaser.Scene {
     this.capacity = armory.equipped.capacity;
     this.ammo = this.capacity;
     this.weapon.setWeapon(this.weaponId);
+    this.movement = new CoverMovement();
+    this.hurtUntil = 0; this.bossRecoilUntil = 0;
+    this.world.setPosition(0, 0).setScale(1);
+    this.combatView.reset(this.map.id);
+    this.combatView.update(this.movement, this.clock);
     el("equipped-name").textContent = `В руках: ${armory.equipped.name}`;
     this.lives = 3;
     this.score = 0;
@@ -137,6 +164,7 @@ class Town extends Phaser.Scene {
     this.ended = false;
     this.nextSpawn = this.clock + 700;
     this.weapon.reset();
+    this.updateCombatUI();
     el("pause").textContent = "Пауза";
     el("reload").textContent = "Перезарядить · R";
     el<HTMLButtonElement>("pause").disabled = true;
@@ -154,6 +182,7 @@ class Town extends Phaser.Scene {
     el<HTMLButtonElement>("reload").disabled = false;
     this.game.canvas.tabIndex = 0;
     this.game.canvas.focus({ preventScroll: true });
+    this.updateCombatUI();
   }
   hud() {
     const progressText =
@@ -193,6 +222,46 @@ class Town extends Phaser.Scene {
     this.bossView = createBoss(this, p.x, p.bodyY, p.scale, this.map.tint,
       phase === "hostage" ? "shield" : phase === "defeated" ? "hostage" : "boss");
     this.bossView.setDepth(p.pixelsPerMeter);
+    this.world.add(this.bossView).sort("depth");
+    if (phase === "exposed") this.bossAimLane = this.movement.lane;
+  }
+  move(direction: number) {
+    if (this.ended || this.intro || this.paused) return;
+    this.movement.move(direction, this.clock); this.updateCombatUI();
+  }
+  stance(crouching: boolean) {
+    if (this.ended || this.intro || this.paused) return;
+    this.movement.stance(crouching, this.clock); this.updateCombatUI();
+  }
+  updateCombatUI() {
+    const p = this.movement;
+    const cover = playerCovers[this.map.id as keyof typeof playerCovers][p.lane];
+    const state = p.moving ? "Переход · вы открыты" : p.protected ? "За укрытием" : "Вы открыты";
+    const text = `${p.lane + 1}/3 · ${cover.name} · ${state}`;
+    if (el("cover-status").textContent !== text) el("cover-status").textContent = text;
+    el("play").dataset.cover = p.protected ? "safe" : "open";
+    const locked = this.ended || this.intro || this.paused;
+    el<HTMLButtonElement>("move-left").disabled = locked || p.lane === 0 || p.moving;
+    el<HTMLButtonElement>("move-right").disabled = locked || p.lane === 2 || p.moving;
+    el<HTMLButtonElement>("crouch").disabled = locked || p.crouching;
+    el<HTMLButtonElement>("peek").disabled = locked || !p.crouching;
+    el("crouch").setAttribute("aria-pressed", String(p.crouching));
+  }
+  receiveFire(x: number, y: number, lane: number) {
+    if (this.ended || this.intro) return;
+    const pan = (x - 480) / 480;
+    gameAudio.play("enemyShot", pan);
+    const outcome = this.movement.receive(lane);
+    const hurt = outcome === "hit" && this.clock >= this.hurtUntil;
+    const point = this.world.getWorldTransformMatrix().transformPoint(x, y);
+    const endX = Math.max(-100, Math.min(1060, 480 + (lane - this.movement.position) * 650));
+    this.combatView.impact(point.x, point.y, this.clock, hurt, endX,
+      outcome === "cover" ? 470 - this.movement.duck * 190 : 500, outcome !== "hit");
+    if (hurt) {
+      this.hurtUntil = this.clock + combatTiming.immunity;
+      this.lives--; gameAudio.play("playerHurt"); this.hud();
+      if (this.lives <= 0) this.finish(false);
+    } else if (outcome !== "hit") gameAudio.play("wood", (endX - 480) / 480);
   }
   reload() {
     if (this.intro || this.ended || this.paused || this.reloading || this.ammo === this.capacity) return;
@@ -207,17 +276,20 @@ class Town extends Phaser.Scene {
     this.paused = !this.paused;
     gameAudio.setPaused(this.paused);
     el("pause").textContent = this.paused ? "Продолжить" : "Пауза";
+    this.updateCombatUI();
   }
   shoot(x: number, y: number) {
-    if (this.intro || this.ended || this.paused || this.reloading || this.ammo === 0) return;
+    if (this.intro || this.ended || this.paused || this.reloading || this.ammo === 0 || !this.movement.canShoot) return;
     this.ammo--;
-    this.weapon.aim(x, y);
+    const screenPoint = this.world.getWorldTransformMatrix().transformPoint(x, y);
+    this.weapon.aim(screenPoint.x, screenPoint.y);
     this.weapon.fire();
     gameAudio.play("shot");
     let hitPerson = false;
     let outcome: "enemy" | "civilian" | "miss" = "miss";
     const pan = (x - 480) / 480;
     const flash = this.add.circle(x, y, 13, 0xffe9a9, 0.8);
+    this.world.add(flash);
     this.tweens.add({
       targets: flash,
       alpha: 0,
@@ -273,6 +345,8 @@ class Town extends Phaser.Scene {
   finish(win: boolean) {
     if (this.intro || this.ended) return;
     this.ended = true;
+    this.updateCombatUI();
+    el("threat-notice").hidden = true;
     gameAudio.stop("reload");
     let saved = true;
     const endlessRun = selected === 0;
@@ -305,8 +379,15 @@ class Town extends Phaser.Scene {
       this.weapon?.update(delta, false);
       return;
     }
-    this.weapon.update(delta, this.reloading);
     const time = (this.clock += delta);
+    this.movement.tick(time);
+    const pan = (this.movement.position - 1) * 30;
+    const zoom = 1 + Math.abs(pan) / 480 + this.movement.duck * 0.12;
+    this.world.setScale(zoom).setPosition(480 * (1 - zoom) - pan, 270 * (1 - zoom) - this.movement.duck * 24);
+    this.weapon.coverAmount = this.movement.duck;
+    this.weapon.update(delta, this.reloading);
+    this.combatView.update(this.movement, time);
+    this.updateCombatUI();
     if (this.reloading && time >= this.reloadEnd) {
       this.reloading = false;
       gameAudio.stop("reload");
@@ -315,15 +396,21 @@ class Town extends Phaser.Scene {
       this.hud();
     }
     if (selected === 4) {
+      const attackPosition = this.encounter.position;
       const event = this.encounter.tick(time);
       if (event) {
-        this.renderBoss();
         if (event === "attack") {
-          this.lives--;
-          this.hud();
-          if (this.lives <= 0) this.finish(false);
-        }
+          this.receiveFire(attackPosition.x - 5 * attackPosition.scale,
+            attackPosition.bodyY - 20 * attackPosition.scale, this.bossAimLane);
+          this.bossRecoilUntil = time + combatTiming.recoil;
+        } else this.renderBoss();
       }
+      const aiming = this.encounter.phase === "exposed";
+      if (this.bossView && (aiming || time < this.bossRecoilUntil)) {
+        const progress = aiming ? 1 - (this.encounter.nextAt - time) / bossTiming.exposed : 1;
+        animateGunman(this.bossView, progress, time, aiming ? undefined : this.bossRecoilUntil - combatTiming.recoil);
+      } else if (this.encounter.phase === "hidden" && this.bossView) this.renderBoss();
+      this.showThreat(aiming);
       return;
     }
     for (const t of [...this.targets]) {
@@ -332,17 +419,18 @@ class Town extends Phaser.Scene {
         t.view.y = (t.bodyY ?? t.y) + 24 * (t.scale ?? 1) * (1 - emergence);
         t.view.alpha = 0.4 + emergence * 0.6;
       }
+      if (t.attack) {
+        const event = tickAttack(t.attack, time, this.movement.lane);
+        if (event === "aim") t.expires = Math.max(t.expires, t.attack.fireAt + combatTiming.recoil);
+        if (event === "fire") this.receiveFire(t.view.x - 5 * (t.scale ?? 1),
+          t.view.y - 20 * (t.scale ?? 1), t.attack.lane);
+        if (this.ended) return;
+        if (t.attack.started) animateGunman(t.view, (time - t.attack.start) / combatTiming.warning, time,
+          t.attack.fired ? t.attack.fireAt : undefined);
+      }
       if (time >= t.expires) {
         t.view.destroy();
         this.targets = this.targets.filter((v) => v !== t);
-        if (!t.civilian) {
-          this.lives--;
-          this.hud();
-          if (this.lives <= 0) {
-            this.finish(false);
-            return;
-          }
-        }
       }
     }
     if (time >= this.nextSpawn) {
@@ -362,10 +450,18 @@ class Town extends Phaser.Scene {
           view,
           expires: time + levels[selected].lifetime,
           appearedAt: this.map.emerge ? time : undefined,
+          attack: !civilian && Math.random() < 0.55 && !this.targets.some(t => t.attack && !t.attack.fired)
+            ? planAttack(time) : undefined,
         });
       }
       this.nextSpawn = time + levels[selected].interval;
     }
+    this.showThreat(this.targets.some(t => t.attack?.started && !t.attack.fired));
+  }
+  showThreat(aiming: boolean) {
+    const notice = el("threat-notice");
+    notice.hidden = !aiming || this.ended;
+    notice.textContent = this.movement.protected ? "Оставайтесь за укрытием — враг целится" : "Враг целится! ↓ Укройтесь или смените позицию";
   }
 }
 const scene = new Town();
@@ -528,6 +624,10 @@ document.addEventListener("keydown", (event) => {
 });
 el("reload").onclick = () => scene.reload();
 el("pause").onclick = () => scene.togglePause();
+el("move-left").onclick = () => scene.move(-1);
+el("move-right").onclick = () => scene.move(1);
+el("crouch").onclick = () => scene.stance(true);
+el("peek").onclick = () => scene.stance(false);
 el("back").onclick = menu;
 el("choose").onclick = menu;
 el("retry").onclick = () => start(selected);

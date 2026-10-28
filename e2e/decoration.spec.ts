@@ -63,7 +63,7 @@ for (const map of ["street", "tavern"]) {
         view: scene.person(slot.x, slot.y, false),
       }));
       return scene.targets.map((target: any) => {
-        const image = scene.children.getByName(`cover-${target.prop}`) as any;
+        const image = scene.world.getByName(`cover-${target.prop}`) as any;
         const frame = image.frame;
         const canvas = document.createElement("canvas");
         canvas.width = frame.cutWidth;
