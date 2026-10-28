@@ -1,5 +1,12 @@
 import { expect, Page } from "@playwright/test";
 
+/** Existing gameplay tests pass through the same visible opening skip as players. */
+export async function skipPrologue(page: Page) {
+  await expect(page.locator("#prologue-dialog")).toBeVisible();
+  await page.getByRole("button", { name: "Пропустить заставки", exact: true }).click();
+  await expect(page.locator("#prologue-dialog")).not.toBeVisible();
+}
+
 /** Control only the encounter's random source; phases still advance through game time. */
 export async function setBossRandom(page: Page, poseRolls: number[]) {
   await page.evaluate(async (rolls) => {

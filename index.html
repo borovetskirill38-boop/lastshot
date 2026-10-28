@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#211d20" />
     <title>Последний патрон</title>
   </head>
-  <body class="in-menu">
+  <body class="in-prologue">
     <div id="menu-backdrop" aria-hidden="true">
       <div class="sun-haze"></div>
       <i class="lantern-glow lantern-left"></i>
@@ -21,7 +21,7 @@
       <i class="tumbleweed"></i>
     </div>
     <div id="arsenal-backdrop" aria-hidden="true"></div>
-    <div id="app">
+    <div id="app" hidden inert>
       <header>
         <span>★ LAST SHOT</span
         ><button id="sound" aria-label="Переключить звук" aria-pressed="false">
@@ -172,6 +172,27 @@
         </p>
       </details>
     </div>
+    <dialog id="prologue-dialog" aria-labelledby="prologue-title" aria-describedby="prologue-text">
+      <div class="prologue-shell">
+        <div class="prologue-topline">
+          <span>★ ПОСЛЕДНИЙ ПАТРОН <small>ПРОЛОГ</small></span>
+          <button id="prologue-skip" type="button">Пропустить заставки</button>
+        </div>
+        <article class="prologue-card">
+          <div class="prologue-art-window"><div id="prologue-art" role="img" aria-label="Панорама Dusty Town"></div></div>
+          <div class="prologue-copy" aria-live="polite" aria-atomic="true">
+            <p id="prologue-kicker"></p>
+            <h1 id="prologue-title">Dusty Town</h1>
+            <p id="prologue-text"></p>
+          </div>
+        </article>
+        <div class="prologue-bottomline">
+          <button id="prologue-back" type="button" disabled>← Назад</button>
+          <div class="prologue-instructions"><span id="prologue-progress">1 / 4</span><span>Клик или касание — дальше</span></div>
+          <button id="prologue-next" type="button">Дальше →</button>
+        </div>
+      </div>
+    </dialog>
     <dialog id="intro-dialog" aria-labelledby="dialogue-title" aria-describedby="dialogue-context">
       <div class="dialogue-shell">
         <div class="dialogue-topline">

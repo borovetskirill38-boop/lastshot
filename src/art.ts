@@ -135,7 +135,7 @@ export function createPerson(
     .setData({ appearance: variant, civilian, boss });
 }
 
-/** Billy and Suzzie use the very same atlas cells as their dialogue portraits. */
+/** Billy and Suzie use the very same atlas cells as their dialogue portraits. */
 export function createBoss(
   scene: Phaser.Scene, x: number, y: number, scale: number, tint: number,
   appearance: "boss" | "shield" | "hostage",

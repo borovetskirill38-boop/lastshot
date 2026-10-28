@@ -4,7 +4,7 @@ import { getIntroDialogue } from "../src/dialogues.js";
 import { levels } from "../src/rules.js";
 import { maps } from "../src/maps.js";
 
-test("every mode has short character lines and the boss conversation includes Suzzie's calls for help", () => {
+test("every mode has short character lines and the boss conversation includes Suzie's calls for help", () => {
   for (const map of maps) {
     const challenges = new Set();
     for (let level = 0; level < levels.length; level++) {
@@ -17,7 +17,7 @@ test("every mode has short character lines and the boss conversation includes Su
       for (const line of lines) assert.ok(line.text.length > 10 && line.text.length <= 120);
       challenges.add(lines[1].text);
       if (level === 4) {
-        assert.ok(lines.filter((line) => line.name === "Сьюззи").length >= 2);
+        assert.ok(lines.filter((line) => line.name === "Сьюзи").length >= 2);
         assert.ok(lines.some((line) => /Помоги|спаси/.test(line.text)));
       }
     }

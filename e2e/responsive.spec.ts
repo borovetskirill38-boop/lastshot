@@ -1,4 +1,4 @@
-import { skipIntro } from "./helpers";
+import { skipPrologue, skipIntro } from "./helpers";
 import { test, expect, Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -44,6 +44,7 @@ for (const [width, height] of sizes) {
       } }));
     });
     await page.goto("/");
+    await skipPrologue(page);
     await expect(page.locator(".level").first()).toBeEnabled();
     await fitsWidth(page);
     const cardsFit = await page.locator(".level").evaluateAll((cards) => cards.every((card) => {
@@ -85,6 +86,7 @@ for (const [width, height] of sizes) {
 test("aim stays aligned and the run survives window resizing and orientation changes", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("lastshot-progress", JSON.stringify({ unlocked: 5, best: [] })));
   await page.goto("/");
+  await skipPrologue(page);
   await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
   await skipIntro(page);
   await page.getByRole("button", { name: "Пауза", exact: true }).click();
@@ -124,6 +126,7 @@ test("standalone HTML adapts offline during rotation and keeps touch and reload 
   page.on("request", (request) => requests.push(request.url()));
   page.on("pageerror", (error) => errors.push(error.message));
   await page.setContent(await readFile("lastshot.html", "utf8"));
+  await skipPrologue(page);
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).tap();
   await skipIntro(page, true);
   let ammo = 6;

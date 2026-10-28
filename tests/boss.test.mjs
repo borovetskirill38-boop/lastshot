@@ -63,7 +63,7 @@ test("each appearance rolls its own pose, allowing either first pose and consecu
   }
 });
 
-test("only exposed hits damage the boss; one wound causes retreat and six wounds rescue Suzzie", () => {
+test("only exposed hits damage the boss; one wound causes retreat and six wounds rescue Suzie", () => {
   for (const map of maps) {
     const boss = new BossEncounter(map.slots, 0, () => 0.6);
     assert.equal(boss.fire(boss.position.x, boss.position.y, 0), "miss");

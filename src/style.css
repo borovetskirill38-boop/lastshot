@@ -1145,3 +1145,63 @@ body.in-dialogue { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .dialogue-actor { transition: none; }
 }
+/* Four illustrated opening cards; the native dialog holds input until the menu. */
+body.in-prologue { overflow: hidden; background: #110e0b; }
+#prologue-dialog {
+  position: fixed; inset: 0; margin: 0; border: 0;
+  width: 100%; max-width: none; height: 100%; height: 100dvh; max-height: none;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(18px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
+  color: #f6e4c4; background: radial-gradient(ellipse at 50% 45%, #46301f77, transparent 75%), #110e0b;
+  overflow-y: auto; overscroll-behavior: contain;
+}
+#prologue-dialog[open] { display: grid; align-items: center; }
+#prologue-dialog::backdrop { background: #110e0b; }
+.prologue-shell { width: min(1280px, 100%); margin: auto; min-width: 0; }
+.prologue-topline, .prologue-bottomline { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.prologue-topline { margin-bottom: 16px; }
+.prologue-topline > span { font: 700 12px/1.5 monospace; letter-spacing: 2px; color: #d7ad70; }
+.prologue-topline small { margin-left: 14px; color: #947d5f; font-size: 10px; letter-spacing: 3px; }
+.prologue-topline button { font-size: 12px; padding: 10px 14px; background: #221a13; }
+.prologue-card { position: relative; width: min(100%, calc((100dvh - 160px) * 16 / 9)); aspect-ratio: 16 / 9; margin: auto; overflow: hidden; border: 1px solid #8e6942; box-shadow: 0 15px 60px #0009; background: #241a12; }
+.prologue-art-window { position: absolute; inset: 0; overflow: hidden; }
+#prologue-art { position: absolute; inset: 0; background: url("./visuals/prologue.webp?inline") 0% 0% / 200% 200% no-repeat; animation: prologue-drift 20s ease-out both; }
+.prologue-copy { position: absolute; inset: auto 0 0; min-width: 0; overflow-wrap: anywhere; padding: clamp(22px, 3.5vw, 46px); padding-top: 72px; background: linear-gradient(transparent, #110d09e8 36%, #110d09fa); text-align: left; text-shadow: 0 2px 5px #000b; }
+#prologue-kicker { margin: 0; color: #d8ac6c; font: 11px/1.6 monospace; letter-spacing: 2.4px; }
+#prologue-title { margin: 8px 0 12px; font: 700 clamp(30px, 4vw, 56px)/1.1 Georgia, serif; color: #ffe2af; }
+#prologue-text { max-width: 800px; margin: 0; font: clamp(16px, 1.6vw, 21px)/1.55 Georgia, serif; color: #ebdbc4; }
+.prologue-bottomline { margin-top: 18px; }
+.prologue-bottomline button { min-width: 135px; }
+#prologue-next { background: #79532f; border-color: #bf935a; }
+.prologue-instructions { display: grid; gap: 6px; text-align: center; color: #a68b68; font: 11px/1.4 monospace; }
+#prologue-progress { font-size: 14px; letter-spacing: 3px; color: #e8bd7b; }
+@keyframes prologue-drift { from { transform: scale(1); } to { transform: scale(1.035); } }
+@media (max-width: 620px) {
+  #prologue-dialog { padding: 14px 12px; }
+  .prologue-topline { gap: 8px; }
+  .prologue-topline > span { font-size: 10px; letter-spacing: 1px; }
+  .prologue-topline small { display: block; margin: 4px 0 0; }
+  .prologue-topline button { max-width: 144px; font-size: 10px; padding: 9px 10px; }
+  .prologue-card { width: 100%; aspect-ratio: auto; }
+  .prologue-art-window { position: relative; aspect-ratio: 16 / 9; }
+  .prologue-copy { position: relative; padding: 21px 18px 24px; background: linear-gradient(130deg, #4b332033, transparent), #201710; }
+  #prologue-kicker { font-size: 9px; letter-spacing: 1.4px; }
+  #prologue-title { font-size: 32px; margin: 9px 0 14px; }
+  #prologue-text { font-size: 17px; }
+  .prologue-bottomline { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .prologue-bottomline button { min-width: 0; padding: 12px 9px; font-size: 12px; }
+  .prologue-instructions { grid-column: 1 / -1; grid-row: 1; display: flex; justify-content: space-between; align-items: center; }
+}
+@media (max-height: 500px) and (min-width: 621px) {
+  #prologue-dialog { padding: 10px 14px; }
+  .prologue-topline { margin-bottom: 9px; }
+  .prologue-topline button { padding: 7px 12px; }
+  .prologue-card { width: 100%; aspect-ratio: auto; display: grid; grid-template-columns: 1.25fr 1fr; }
+  .prologue-art-window { position: relative; aspect-ratio: 16 / 9; align-self: center; }
+  .prologue-copy { position: relative; padding: 16px; background: #211810; }
+  #prologue-title { font-size: 28px; margin: 7px 0 10px; }
+  #prologue-kicker { font-size: 9px; letter-spacing: 1px; }
+  #prologue-text { font-size: 15px; line-height: 1.45; }
+  .prologue-bottomline { margin-top: 10px; }
+  .prologue-bottomline button { padding: 9px 14px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { #prologue-art { animation: none; } }

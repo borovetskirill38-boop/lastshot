@@ -1,10 +1,11 @@
-import { skipIntro } from "./helpers";
+import { skipPrologue, skipIntro } from "./helpers";
 import { test, expect } from "@playwright/test";
 
 test("people cycle distinct appearances, reuse their atlas and remain inside the original hit area", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
+  await skipPrologue(page);
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
   await skipIntro(page);
   const result = await page.evaluate(async () => {
@@ -69,6 +70,7 @@ test("level selection waits for artwork decoding before starting gameplay", asyn
     });
   });
   await page.goto("/");
+  await skipPrologue(page);
   await expect(page.locator(".level")).toHaveCount(5);
   for (const button of await page.locator(".level").all()) {
     await expect(button).toBeDisabled();

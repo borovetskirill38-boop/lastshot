@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { skipIntro } from "./helpers";
+import { skipPrologue, skipIntro } from "./helpers";
 
 for (const touch of [false, true]) {
   test(`the smallest projected actor on every map remains visible and hittable by ${touch ? "touch" : "mouse"}`, async ({ browser, baseURL }) => {
@@ -13,6 +13,7 @@ for (const touch of [false, true]) {
       page.on("pageerror", (error) => errors.push(error.message));
       await page.addInitScript(() => localStorage.setItem("lastshot-progress", JSON.stringify({ unlocked: 5, best: [] })));
       await page.goto("/");
+      await skipPrologue(page);
       for (const map of ["saloon", "street", "tavern"]) {
         await page.locator(`.map-card[data-map="${map}"]`).click();
         await page.getByRole("button", { name: /02.*Мирные жители/ }).click();

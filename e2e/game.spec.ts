@@ -1,4 +1,4 @@
-import { skipIntro, setBossRandom } from "./helpers";
+import { skipPrologue, skipIntro, setBossRandom } from "./helpers";
 import { test, expect, Page } from "@playwright/test";
 async function scene<T>(page: Page, fn: string): Promise<T> {
   return page.evaluate(async (source) => {
@@ -23,6 +23,7 @@ test("first level is endless until three misses", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
+  await skipPrologue(page);
   await expect(page.locator("canvas")).toBeAttached();
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
   await skipIntro(page);
@@ -65,6 +66,7 @@ test("first level is endless until three misses", async ({ page }) => {
     page.getByRole("button", { name: "Главное меню" }),
   ).toBeVisible();
   await page.reload();
+  await skipPrologue(page);
   await expect(
     page.getByRole("button", { name: /02.*Мирные жители/ }),
   ).toBeEnabled();
@@ -83,6 +85,7 @@ test("civilian costs life, pause freezes timers, misses and defeat", async ({
     ),
   );
   await page.goto("/");
+  await skipPrologue(page);
   await expect(page.locator("canvas")).toBeAttached();
   await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
   await skipIntro(page);
@@ -115,6 +118,7 @@ test("boss takes six hits and campaign completes", async ({ page }) => {
     ),
   );
   await page.goto("/");
+  await skipPrologue(page);
   await expect(page.locator("canvas")).toBeAttached();
   await page.getByRole("button", { name: /Шериф Картер против Билли Пули/ }).click();
   await setBossRandom(page, [0.1, 0.9, 0.9, 0.1, 0.1, 0.9]);
@@ -144,6 +148,7 @@ test("mobile touch shoots and reloads", async ({ browser }) => {
   });
   const page = await context.newPage();
   await page.goto("/");
+  await skipPrologue(page);
   await page.getByRole("button", { name: "Переключить звук" }).tap();
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   await expect(page.locator("canvas")).toBeAttached();
@@ -164,6 +169,7 @@ test("view model tracks aim, fires at the muzzle, ejects brass and freezes on pa
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
+  await skipPrologue(page);
   await expect(page.locator("canvas")).toBeAttached();
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
   await skipIntro(page);

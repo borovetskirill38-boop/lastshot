@@ -101,17 +101,17 @@ aligns to that side. On narrow screens both portraits sit above the speech box,
 keeping their left/right order. Reduced motion removes the highlight transition.
 No gameplay sprites, spawn rules or weapon effects depend on these portraits.
 
-## Billy Bullet and Suzzie
+## Billy Bullet and Suzie
 
 - `boss-encounter.webp`: original AI-generated transparent 2172×724 atlas,
   quality 94 WebP. Three equal cells: the boss alone, the same boss restraining
-  Suzzie in front of himself, and Suzzie alone. His gray beard, scar, silver hat band,
-  burgundy waistcoat and red cravat match across both poses. Suzzie is an adult
+  Suzie in front of himself, and Suzie alone. His gray beard, scar, silver hat band,
+  burgundy waistcoat and red cravat match across both poses. Suzie is an adult
   frontier saloon waitress, wearing a modest high-neck cream blouse, green
   waistcoat, apron and pinned brown hair. The pair is unharmed and non-graphic.
 
 The first cell is used verbatim both for the boss conversation portrait and his
-combat sprite; the third similarly serves Suzzie's dialogue and rescued appearance.
+combat sprite; the third similarly serves Suzie's dialogue and rescued appearance.
 The middle cell is the protected hostage pose. Sprites preserve cell proportions,
 share one Phaser texture, and use each cover's scale and foreground mask. CSS uses
 the same embedded image for dialogue frames. The old boss cell in `people.webp`
@@ -131,7 +131,7 @@ no new image is created at each appearance. All assets work in the standalone HT
 - World depth uses projected pixels per metre: nearer objects have greater depth.
   Each cover draws just ahead of its own actor, and nearby cover also stops shots
   at farther actors. Weapon, smoke, brass and reticle use layers 10000+ above all
-  world geometry. Enemies, civilians and Billy with Suzzie share this rule.
+  world geometry. Enemies, civilians and Billy with Suzie share this rule.
 - Each street/interior now has eight positions. All three menu previews are
   captured from actual game rendering without characters, weapons or crosshair.
 
@@ -154,3 +154,16 @@ spawn attached. Doorway crates, supply stacks and the handcart have plausible
 physical dimensions and at least 0.75m concealment. Original door openings no
 longer make a torso appear out of the floor. Artwork previews show the actual
 rendered scenery with the updated props and depth order.
+
+
+## Opening story
+
+- `prologue.webp`: original AI-generated opaque 1672×941 atlas, quality94 WebP,
+  four equal quadrants: Dusty Town panorama, a gang intimidating a shopkeeper,
+  Billy in front of his gang, and sheriff Carter arriving. Existing dialogue
+  and boss artwork supplied the character identities. Text is accessible HTML,
+  separate from the illustration; one inline atlas serves all four scenes.
+- The opening uses a native modal dialog with click/touch and keyboard controls.
+  Mobile portrait places text below the image; short landscape uses two columns.
+  Reduced-motion preferences remove the slow illustration zoom. Returning from
+  gameplay does not reopen the story; every fresh page load begins it again.

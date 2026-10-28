@@ -4,6 +4,7 @@ import { GameAudio } from "./audio";
 import { Armory } from "./armory";
 import { observeGameLayout } from "./layout";
 import { IntroDialogue } from "./dialogue";
+import { OpeningStory } from "./prologue";
 import { getIntroDialogue } from "./dialogues.js";
 import { BossEncounter, bossTiming } from "./boss.js";
 import { hitsWood } from "./surfaces.js";
@@ -32,6 +33,7 @@ let mapSaved = true;
 export const gameAudio = new GameAudio();
 const armory = new Armory(storage);
 const introDialogue = new IntroDialogue();
+const openingStory = new OpeningStory(() => menu());
 type Target = {
   x: number;
   y: number;
@@ -182,9 +184,9 @@ class Town extends Phaser.Scene {
     const phase = this.encounter.phase;
     const notice = el("boss-notice");
     notice.dataset.phase = phase;
-    const action = phase === "hostage" ? "Сьюззи в плену — НЕ СТРЕЛЯЙТЕ!"
+    const action = phase === "hostage" ? "Сьюзи в плену — НЕ СТРЕЛЯЙТЕ!"
       : phase === "exposed" ? "Он открыт — стреляйте!" : "Меняет укрытие…";
-    notice.textContent = phase === "defeated" ? "Сьюззи спасена!" : `Билли Пуля ${this.bossHP}/6 · ${action}`;
+    notice.textContent = phase === "defeated" ? "Сьюзи спасена!" : `Билли Пуля ${this.bossHP}/6 · ${action}`;
     if (phase === "hidden") return;
     const p = this.bossPosition;
     this.bossView = createBoss(this, p.x, p.bodyY, p.scale, this.map.tint,
@@ -228,7 +230,7 @@ class Town extends Phaser.Scene {
         outcome = "civilian";
         this.lives--;
         gameAudio.play("civilianDeath", pan);
-        el("boss-notice").textContent = `Сьюззи перед ним! −1 жизнь · Билли Пуля ${this.bossHP}/6`;
+        el("boss-notice").textContent = `Сьюзи перед ним! −1 жизнь · Билли Пуля ${this.bossHP}/6`;
         if (this.lives <= 0) this.finish(false);
       } else if (hit === "hit" || hit === "defeated") {
         hitPerson = true;
@@ -289,7 +291,7 @@ class Town extends Phaser.Scene {
         : "Город ждёт твоего возвращения";
     el("result-text").textContent = endlessRun
       ? `${this.score} очков · ${this.kills} бандитов. Три ошибки — и смена окончена. ${saved ? "Рекорд сохранён." : "Сохранение недоступно: рекорд действует до закрытия страницы."}`
-      : `${this.score} очков · ${this.kills} попаданий. ${win ? (saved ? "Прогресс сохранён." : "Сохранение недоступно: прогресс действует до закрытия страницы.") : "Попробуй снова: следи за патронами и береги жителей."}${win && selected === 4 ? " Сьюззи спасена — вы снова вместе." : ""}`;
+      : `${this.score} очков · ${this.kills} попаданий. ${win ? (saved ? "Прогресс сохранён." : "Сохранение недоступно: прогресс действует до закрытия страницы.") : "Попробуй снова: следи за патронами и береги жителей."}${win && selected === 4 ? " Сьюзи спасена — вы снова вместе." : ""}`;
     el("retry").textContent = endlessRun ? "Начать заново" : "Ещё раз";
     el("choose").textContent = endlessRun ? "Главное меню" : "Выбор уровня";
     el("next").hidden = endlessRun || !win || selected === 4;
@@ -381,7 +383,7 @@ const gameLayout = observeGameLayout(el("game-viewport"), el("game"), (width, he
   scene.scale.setParentSize(width, height);
   scene.scale.refresh();
 });
-game.events.once("destroy", () => gameLayout.destroy());
+game.events.once("destroy", () => { gameLayout.destroy(); openingStory.destroy(); });
 
 function updateMapPicker() {
   const picker = el("map-options");
@@ -392,6 +394,7 @@ function updateMapPicker() {
       button.dataset.map = map.id;
       button.innerHTML = `<i class="map-preview" aria-hidden="true"></i><span><b>${map.name}</b><small>${map.time}</small></span><i class="map-check" aria-hidden="true">✓</i>`;
       button.onclick = () => {
+        if (openingStory.active) return;
         selectedMap = map;
         try {
           storage.setItem("lastshot-map", map.id);
@@ -419,7 +422,7 @@ function menu() {
   introDialogue.close();
   gameAudio.stop();
   gameAudio.setPaused(false);
-  gameAudio.setMenu(true);
+  gameAudio.setMenu(!openingStory.active);
   scene.ended = true;
   scene.intro = false;
   el("play").hidden = true;
@@ -428,7 +431,7 @@ function menu() {
   el("arsenal").hidden = true;
   el<HTMLButtonElement>("arsenal-open").disabled = !townReady;
   document.body.classList.remove("in-arsenal", "in-play", "boss-mode");
-  document.body.classList.add("in-menu");
+  document.body.classList.toggle("in-menu", !openingStory.active);
   window.scrollTo(0, 0);
   document.querySelector(".saloon-transition")?.remove();
   updateMapPicker();
@@ -463,7 +466,7 @@ function menu() {
   });
 }
 function start(i: number) {
-  if (!townReady) return;
+  if (!townReady || openingStory.active) return;
   document.body.classList.remove("in-menu", "in-arsenal");
   document.body.classList.add("in-play");
   document.body.classList.toggle("boss-mode", i === 4);
@@ -499,7 +502,7 @@ function start(i: number) {
   );
 }
 el("arsenal-open").onclick = () => {
-  if (!townReady) return;
+  if (!townReady || openingStory.active) return;
   scene.ended = true;
   el("menu").hidden = true;
   el("play").hidden = true;

@@ -1,5 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
-import { skipIntro } from "./helpers";
+import { skipPrologue, skipIntro } from "./helpers";
 
 async function shoot(page: Page, x: number, y: number) {
   const box = await page.locator("canvas").boundingBox();
@@ -8,6 +8,7 @@ async function shoot(page: Page, x: number, y: number) {
 
 test("every saloon window contains a visible detailed room instead of a black recess", async ({ page }) => {
   await page.goto("/");
+  await skipPrologue(page);
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
   await skipIntro(page);
   await page.getByRole("button", { name: "Пауза", exact: true }).click();
@@ -47,6 +48,7 @@ for (const map of ["street", "tavern"]) {
     page.on("pageerror", (error) => errors.push(error.message));
     await page.addInitScript(() => localStorage.setItem("lastshot-progress", JSON.stringify({ unlocked: 5, best: [] })));
     await page.goto("/");
+    await skipPrologue(page);
     await page.locator(`.map-card[data-map="${map}"]`).click();
     await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
     await skipIntro(page);

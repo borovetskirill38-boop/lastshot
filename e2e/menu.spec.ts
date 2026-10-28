@@ -1,10 +1,11 @@
-import { skipIntro } from "./helpers";
+import { skipPrologue, skipIntro } from "./helpers";
 import { test, expect } from "@playwright/test";
 
 test("saloon level doors respond to hover and keyboard, keep locked levels closed, and return cleanly", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
+  await skipPrologue(page);
   const first = page.getByRole("button", { name: /01.*Первый выстрел/ });
   const locked = page.getByRole("button", { name: /02.*Мирные жители/ });
   await expect(first).toBeEnabled();
@@ -44,6 +45,7 @@ test("mobile saloon menu fits the viewport, supports touch, and respects reduced
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
+  await skipPrologue(page);
   const first = page.getByRole("button", { name: /01.*Первый выстрел/ });
   await expect(first).toBeEnabled();
   const layout = await page.evaluate(() => ({

@@ -1,4 +1,4 @@
-import { skipIntro, setBossRandom } from "./helpers";
+import { skipPrologue, skipIntro, setBossRandom } from "./helpers";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
@@ -9,6 +9,7 @@ test("recordings decode, produce an audio signal, and obey mute and voice limits
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
+  await skipPrologue(page);
   await page.getByRole("button", { name: "Переключить звук" }).click();
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   const result = await page.evaluate(async () => {
@@ -81,6 +82,7 @@ test("hits route to the right material and reload audio pauses, resumes and canc
     ),
   );
   await page.goto("/");
+  await skipPrologue(page);
   await page.getByRole("button", { name: "Переключить звук" }).click();
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
@@ -214,6 +216,7 @@ test("unavailable Web Audio does not break shooting", async ({ page }) => {
     }),
   );
   await page.goto("/");
+  await skipPrologue(page);
   await page.getByRole("button", { name: "Переключить звук" }).click();
   await expect(page.locator("#sound")).toHaveText("Звук недоступен");
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
@@ -231,6 +234,7 @@ test("menu music and ambience are unique loops, stop for play, mute and hide, an
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
+  await skipPrologue(page);
   await page.getByRole("button", { name: "Переключить звук" }).click();
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   const state = () =>
@@ -296,6 +300,7 @@ test("the same centered gun take overlaps every hit instead of replacing it", as
     ),
   );
   await page.goto("/");
+  await skipPrologue(page);
   await page.getByRole("button", { name: "Переключить звук" }).click();
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
@@ -379,6 +384,7 @@ test("mode hover cues fire once per button entry and selection opens the saloon 
     ),
   );
   await page.goto("/");
+  await skipPrologue(page);
   await page.getByRole("button", { name: "Переключить звук" }).click();
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   await page.evaluate(async () => {
@@ -432,6 +438,7 @@ test("bandits share the boss hurt voice, civilians raise its pitch, and boss rec
     expect(createHash("sha256").update(bytes).digest("hex")).toBe(hash);
   }
   await page.goto("/");
+  await skipPrologue(page);
   await page.getByRole("button", { name: "Переключить звук" }).click();
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
   const voices = await page.evaluate(async () => {

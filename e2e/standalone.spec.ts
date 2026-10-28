@@ -1,4 +1,4 @@
-import { skipIntro } from "./helpers";
+import { skipPrologue, skipIntro } from "./helpers";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -25,6 +25,7 @@ test("single HTML runs offline with weapon and no external dependencies", async 
     };
   });
   await page.setContent(await readFile("lastshot.html", "utf8"));
+  await skipPrologue(page);
   await expect(page.locator("canvas")).toBeAttached();
   await page.getByRole("button", { name: "Переключить звук" }).click();
   await expect(page.locator("#sound")).toHaveText("Звук: вкл.");
@@ -58,6 +59,7 @@ test("offline mobile workshop equips a weapon, uses its capacity and keeps shot 
   page.on("request", (r) => requests.push(r.url()));
   page.on("pageerror", (e) => errors.push(e.message));
   await page.setContent(await readFile("lastshot.html", "utf8"));
+  await skipPrologue(page);
   await page.getByRole("button", { name: /^Арсенал/ }).tap();
   await page.getByRole("button", { name: "Дальний дозор", exact: true }).tap();
   await expect(page.locator("#weapon-capacity")).toHaveText("8");

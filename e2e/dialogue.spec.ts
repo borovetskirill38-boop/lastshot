@@ -1,6 +1,6 @@
 import { test, expect, Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { skipIntro } from "./helpers";
+import { skipPrologue, skipIntro } from "./helpers";
 
 const modes = ["Первый выстрел", "Мирные жители", "Быстрая рука", "Шесть патронов", "Шериф Картер против Билли Пули"];
 const locations = [
@@ -41,6 +41,7 @@ for (const [mapId, mapButton, mapName] of locations) {
       page.on("pageerror", (error) => errors.push(error.message));
       await unlock(page);
       await page.goto("/");
+      await skipPrologue(page);
       await page.getByRole("button", { name: mapButton, exact: true }).click();
       await page.getByRole("button", { name: new RegExp(name) }).click();
       await expect(page.getByRole("dialog", { name: "Перед перестрелкой" })).toBeVisible();
@@ -50,7 +51,7 @@ for (const [mapId, mapButton, mapName] of locations) {
       await expect(page.getByRole("img", { name: level === 4 ? "Портрет Билли Пули" : "Портрет бандита", exact: true })).toBeVisible();
       await expect(page.locator("#dialogue-enemy-name")).toHaveText(enemy);
       let heroBubble = 0;
-      const speakers = level === 4 ? ["Шериф Картер", enemy, "Сьюззи", "Шериф Картер", enemy, "Сьюззи", "Шериф Картер"]
+      const speakers = level === 4 ? ["Шериф Картер", enemy, "Сьюзи", "Шериф Картер", enemy, "Сьюзи", "Шериф Картер"]
         : ["Шериф Картер", enemy, "Шериф Картер", enemy];
       for (const [index, speaker] of speakers.entries()) {
         const hero = speaker === "Шериф Картер";
@@ -58,7 +59,7 @@ for (const [mapId, mapButton, mapName] of locations) {
         await expect(page.locator("#dialogue-speaker")).toHaveText(speaker);
         await expect(page.locator("#dialogue-hero")).toHaveAttribute("aria-current", String(hero));
         await expect(page.locator("#dialogue-enemy")).toHaveAttribute("aria-current", String(!hero));
-        if (speaker === "Сьюззи") await expect(page.getByRole("img", { name: "Портрет Сьюззи, официантки", exact: true })).toBeVisible();
+        if (speaker === "Сьюзи") await expect(page.getByRole("img", { name: "Портрет Сьюзи, официантки", exact: true })).toBeVisible();
         const layout = await placement(page);
         expect(layout.heroRight).toBeLessThan(layout.enemyLeft);
         if (index === 0) heroBubble = layout.speechLeft;
@@ -87,6 +88,7 @@ for (const [mapId, mapButton, mapName] of locations) {
 
 test("reading holds timers, blocks gameplay input and leaves ammunition and saves intact", async ({ page }) => {
   await page.goto("/");
+  await skipPrologue(page);
   const saved = () => page.evaluate(() => [localStorage.getItem("lastshot-progress"), localStorage.getItem("lastshot-arsenal")]);
   const beforeSave = await saved();
   await page.getByRole("button", { name: /01.*Первый выстрел/ }).click();
@@ -112,6 +114,7 @@ test("reading holds timers, blocks gameplay input and leaves ammunition and save
 
 test("Escape and the back button cancel cleanly; keyboard advances lines and skip starts once", async ({ page }) => {
   await page.goto("/");
+  await skipPrologue(page);
   const first = page.getByRole("button", { name: /01.*Первый выстрел/ });
   await first.click();
   await expect(page.locator("#dialogue-next")).toBeFocused();
@@ -143,6 +146,7 @@ test("Escape and the back button cancel cleanly; keyboard advances lines and ski
 test("next level and retry each open a fresh dialogue for the selected map and mode", async ({ page }) => {
   await unlock(page);
   await page.goto("/");
+  await skipPrologue(page);
   await page.getByRole("button", { name: locations[2][1], exact: true }).click();
   await page.getByRole("button", { name: /02.*Мирные жители/ }).click();
   await skipIntro(page);
@@ -171,6 +175,7 @@ test("offline touch dialogue fits narrow screens and rotation, then preserves th
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("request", (request) => requests.push(request.url()));
   await page.setContent(await readFile("lastshot.html", "utf8"));
+  await skipPrologue(page);
   await page.getByRole("button", { name: /^Арсенал/ }).tap();
   await page.getByRole("button", { name: "Дальний дозор", exact: true }).tap();
   await page.getByRole("button", { name: "Взять оружие", exact: true }).tap();
@@ -212,6 +217,7 @@ test("offline touch dialogue fits narrow screens and rotation, then preserves th
 test("embedded portrait artwork decodes and the right portrait switches from boss back to bandit", async ({ page }) => {
   await unlock(page);
   await page.goto("/");
+  await skipPrologue(page);
   await page.getByRole("button", { name: /Шериф Картер против Билли Пули/ }).click();
   await expect(page.locator("#intro-dialog")).toHaveAttribute("data-opponent", "boss");
   const portrait = await page.locator("#dialogue-enemy-portrait").evaluate(async (element) => {
@@ -233,7 +239,7 @@ test("embedded portrait artwork decodes and the right portrait switches from bos
   await page.screenshot({ path: "test-results/dialogue-boss.png", fullPage: true });
   await page.locator("#dialogue-next").click();
   await expect(page.locator("#dialogue-progress")).toHaveText("3 / 7");
-  await expect(page.getByRole("img", { name: "Портрет Сьюззи, официантки", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Портрет Сьюзи, официантки", exact: true })).toBeVisible();
   await expect(page.locator("#dialogue-line")).toContainText("Помоги мне");
   expect(await page.locator("#dialogue-enemy-portrait").evaluate((element) => getComputedStyle(element).backgroundPositionX)).toBe("100%");
   await page.getByRole("button", { name: "← Выбор уровня", exact: true }).click();

@@ -1,4 +1,4 @@
-import { skipIntro } from "./helpers";
+import { skipPrologue, skipIntro } from "./helpers";
 import { test, expect } from "@playwright/test";
 
 const pocket = "Пыльный спутник", long = "Дальний дозор", classic = "Последний довод";
@@ -23,6 +23,7 @@ test("weapon choice changes capacity and viewmodel, reloads to that capacity and
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
+  await skipPrologue(page);
   for (const [name, capacity, frame] of [[pocket, 5, "pocket"], [long, 8, "long"]] as const) {
     await open(page);
     await equip(page, name);
@@ -53,6 +54,7 @@ test("weapon choice changes capacity and viewmodel, reloads to that capacity and
     await page.getByRole("button", { name: "← Уровни" }).click();
   }
   await page.reload();
+  await skipPrologue(page);
   await open(page);
   await expect(page.locator("#weapon-name")).toHaveText(long);
   await expect(page.locator("#equip-weapon")).toBeDisabled();
@@ -62,6 +64,7 @@ test("weapon choice changes capacity and viewmodel, reloads to that capacity and
 
 test("hits, misses and civilian hits are counted once, ignore blocked shots and expiry, and stay separate per weapon", async ({ page }) => {
   await page.goto("/");
+  await skipPrologue(page);
   await open(page);
   await equip(page, pocket);
   await back(page);
@@ -112,6 +115,7 @@ test("hits, misses and civilian hits are counted once, ignore blocked shots and 
   expect(final.stats["last-word"]).toEqual({ hits: 2, misses: 1, civilianHits: 0 });
   expect(final.stats["dust-companion"]).toEqual(state.stats["dust-companion"]);
   await page.reload();
+  await skipPrologue(page);
   await open(page);
   await page.getByRole("button", { name: pocket, exact: true }).click();
   await expect(page.locator("#weapon-hits")).toHaveText("2");
@@ -127,6 +131,7 @@ test("unavailable storage keeps selection and statistics working for the session
     };
   });
   await page.goto("/");
+  await skipPrologue(page);
   await open(page);
   await equip(page, pocket);
   await expect(page.locator("#arsenal-save-note")).toContainText("Сохранение недоступно");
