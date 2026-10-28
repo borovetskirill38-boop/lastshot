@@ -1,6 +1,6 @@
 import { mapProps, propSlot } from "./props.js";
 import { cameras, saloonGeometry } from "./cameras.js";
-import { projectTarget } from "./projection.js";
+import { projectTarget, HIT_TOP_PX, HIT_BOTTOM_PX } from "./projection.js";
 
 // Upper edges measured on tavern.webp. The same lines mask sprites and stop shots.
 const tavernBar = [[658, 231], [720, 235], [820, 243], [960, 260]];
@@ -17,6 +17,25 @@ export const tavernCovers = [
   [...tavernCrates, [502, 264], [444, 264]],
 ];
 
+/** Make facade actors easier to read while keeping the painted scene's projection. */
+function saloonTarget(opening) {
+  const projected = projectTarget(cameras.saloon, {
+    x: (opening.left + opening.right) / 2, groundY: opening.floorY,
+    floorElevationM: opening.floorElevationM, coverY: opening.coverY ?? opening.bottom,
+    coverProfile: opening.coverProfile, aperture: opening,
+  });
+  const factor = saloonGeometry.characterScale;
+  const scale = projected.scale * factor;
+  const bodyY = projected.groundY + (projected.bodyY - projected.groundY) * factor;
+  const top = bodyY - HIT_TOP_PX * scale;
+  const bottom = Math.min(bodyY + HIT_BOTTOM_PX * scale, projected.coverY - 1);
+  return {
+    ...projected, scale, bodyY, y: (top + bottom) / 2,
+    personHeightPx: projected.personHeightPx * factor,
+    coverBottomY: Math.max(projected.coverY + 14, projected.bodyY + 48 * projected.scale + 2),
+  };
+}
+
 /** World coordinates are shared by artwork, cover, spawning and hit testing. */
 const mapDefinitions = [
   {
@@ -27,12 +46,7 @@ const mapDefinitions = [
     emerge: false,
     description: "Салун с крыльцом, ступенями и перилами. Наверху — три спальни, внизу — кухня, питейный зал и бар.",
     camera: cameras.saloon,
-    slots: saloonGeometry.openings.map((opening) => projectTarget(cameras.saloon, {
-      x: (opening.left + opening.right) / 2, groundY: opening.floorY,
-      floorElevationM: opening.floorElevationM, coverY: opening.coverY ?? opening.bottom,
-      coverProfile: opening.coverProfile,
-      aperture: opening,
-    })),
+    slots: saloonGeometry.openings.map(saloonTarget),
   },
   {
     id: "street",
@@ -133,7 +147,7 @@ export const maps = mapDefinitions.map((map) => {
       const saloon = map.id === "saloon";
       const left = saloon ? slot.aperture.left - 8 : slot.x - 60 * slot.scale;
       const right = saloon ? slot.aperture.right + 8 : slot.x + 60 * slot.scale;
-      const bottom = saloon ? Math.max(slot.coverY + 14, slot.bodyY + 48 * slot.scale + 2) : slot.groundY + 4;
+      const bottom = saloon ? slot.coverBottomY : slot.groundY + 4;
       return { id: `${map.id}-${i}`, polygon: saloon && slot.coverProfile
         ? [...slot.coverProfile, [right, bottom], [left, bottom]] : rectangle(left, slot.coverY, right, bottom),
         depth: slot.pixelsPerMeter + 0.1 };

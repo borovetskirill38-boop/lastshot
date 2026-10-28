@@ -7,6 +7,7 @@ export const cameras = {
 
 export const saloonGeometry = {
   pixelsPerMeter: 50,
+  characterScale: 1.25,
   floorY: 427,
   upperFloorY: 282,
   storeyHeightM: 2.9,
