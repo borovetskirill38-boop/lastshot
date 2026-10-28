@@ -1,4 +1,4 @@
-export const combatTiming = { move: 360, stance: 200, warning: 1100, recoil: 300, immunity: 650 };
+export const combatTiming = { move: 360, stance: 200, warning: 1100, recoil: 620, immunity: 650 };
 export const playerCovers = {
   saloon: [{ name: "Бочки у крыльца", frame: "barrels" }, { name: "Ящики с припасами", frame: "crates" }, { name: "Бочки у коновязи", frame: "barrels" }],
   street: [{ name: "Бочки торговца", frame: "barrels" }, { name: "Грузовая телега", frame: "wagon" }, { name: "Ящики у лавки", frame: "crates" }],

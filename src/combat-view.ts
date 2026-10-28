@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { playerCovers, CoverMovement } from "./combat.js";
+import { sampleGunmanFrame, gunmanAnimation } from "./enemy-animation.js";
 
 export class CombatView {
   readonly foreground: Phaser.GameObjects.Container;
@@ -54,16 +55,9 @@ export class CombatView {
   }
 }
 
-/** A shared atlas keeps hats/faces consistent as the shoulder and gun rise. */
+/** Cached in-between frames and continuous shoulder motion use the game clock. */
 export function animateGunman(view: Phaser.GameObjects.Container, progress: number, now: number, firedAt?: number) {
   const scene = view.scene;
-  const texture = scene.textures.get("enemy-combat");
-  const source = texture.getSourceImage();
-  if (!texture.has("0-0")) for (let row = 0; row < 4; row++) for (let col = 0; col < 4; col++) {
-    const x = Math.round(col * source.width / 4), y = Math.round(row * source.height / 4);
-    texture.add(`${row}-${col}`, 0, x, y, Math.round((col + 1) * source.width / 4) - x,
-      Math.round((row + 1) * source.height / 4) - y);
-  }
   const appearance = String(view.getData("appearance"));
   const row = appearance.includes("bandolier") ? 1 : appearance.includes("scar") ? 2 : appearance === "boss" ? 3 : 0;
   let image = view.getData("combat-image") as Phaser.GameObjects.Image | undefined;
@@ -71,22 +65,25 @@ export function animateGunman(view: Phaser.GameObjects.Container, progress: numb
   if (!image) {
     const original = view.list.find(child => child.type === "Image") as Phaser.GameObjects.Image;
     original.setAlpha(0);
-    image = scene.add.image(0, 0, "enemy-combat", `${row}-0`).setOrigin(0.5, 0.57).setTint(original.tintTopLeft);
+    image = scene.add.image(0, 0, `gunman-motion-${row}`, "0").setOrigin(0.5, 0.57).setTint(original.tintTopLeft);
     flare = scene.add.graphics();
     view.add([image, flare]);
     view.setData({ "combat-image": image, "combat-flare": flare });
   }
   const age = firedAt === undefined ? Infinity : now - firedAt;
-  const recoil = age >= 0 && age < 300;
-  // The flash starts on the aimed muzzle; only then does the wrist kick upward.
-  const frame = recoil ? age < 75 ? 2 : 3 : firedAt !== undefined ? 0 : progress < 0.22 ? 0 : progress < 0.48 ? 1 : 2;
-  image.setTexture("enemy-combat", `${row}-${frame}`).setDisplaySize(row === 3 ? 112 : 84, 112);
-  image.setPosition(recoil ? -Math.sin(age / 300 * Math.PI) * 2 : Math.sin(progress * Math.PI) * 1.2,
-    recoil ? -Math.sin(age / 300 * Math.PI) * 3 : -Math.min(progress, 0.5) * 2);
-  image.rotation = recoil ? -Math.sin(age / 300 * Math.PI) * 0.035 : 0;
+  const recoil = age >= 0 && age < gunmanAnimation.recoveryMs;
+  const frame = String(sampleGunmanFrame(progress, now, firedAt));
+  if (image.frame.name !== frame) image.setFrame(frame);
+  image.setDisplaySize(row === 3 ? 112 : 84, 112);
+  const kick = recoil ? Math.sin(Math.PI * Math.min(1, age / 190)) * Math.exp(-age / 170) : 0;
+  const rise = Math.min(1, Math.max(0, progress / gunmanAnimation.raiseFraction));
+  image.setPosition(-kick * 1.4, -kick * 2 - (firedAt === undefined ? Math.sin(rise * Math.PI) * .6 : 0));
+  image.rotation = -kick * .018;
   flare!.clear();
-  if (recoil && age < 75) {
-    flare!.fillStyle(0xffd488, 0.5).fillCircle(-5, -20, 18);
-    flare!.fillStyle(0xfff7ca, 1).fillTriangle(-13, -18, -4, -40, 5, -16);
+  if (recoil && age < 65) {
+    const muzzleY = -20 - kick * 5;
+    const strength = 1 - age / 65;
+    flare!.fillStyle(0xffd488, strength * .5).fillCircle(-5, muzzleY, 18);
+    flare!.fillStyle(0xfff7ca, strength).fillTriangle(-13, muzzleY + 2, -4, muzzleY - 20, 5, muzzleY + 4);
   }
 }

@@ -4,8 +4,14 @@
 
 - `enemy-combat.webp`: original transparent1448×1086 atlas, four rows (mustache,
   bandolier, scar, Billy) and four poses (lowered gun, raising, aimed at viewer,
-  recoil). Existing character art provided appearance references. Pose frames,
-  shoulder motion and timed muzzle flash use gameplay time.
+  recoil). Existing character art provided appearance references. `gunman-frames.ts`
+  uses the first three drawings as arm landmarks to bake 96 intermediate frames
+  for each appearance: 48 raising and 48 recoil/lowering frames. Piecewise affine
+  warping moves elbow, wrist and muzzle; the hat/eyes retain a fixed source crop.
+  Four shared 1536×1360 CanvasTextures are prepared while the scene loads, with
+  no per-shot texture creation or per-frame pixel processing. A 600ms recovery
+  fits Billy's existing 650ms retreat. Frame sampling, shoulder motion and muzzle
+  flash use gameplay time; pause freezes them and no warning indicators return.
 - `player-covers.webp`: original transparent2172×724 props: oak barrels,
   freight wagon and overturned saloon table. Measured cropped frames avoid
   gutters; existing crate artwork completes the nine map-specific positions.

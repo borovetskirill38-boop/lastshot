@@ -104,7 +104,8 @@ test("civilian costs life, pause freezes timers, misses and defeat", async ({
     .toBe(true);
   const t = await scene<{ x: number; y: number }>(
     page,
-    "s=>s.targets.find(t=>t.civilian)",
+    // Serialise coordinates only, not the target's entire Phaser scene graph.
+    "s=>{const t=s.targets.find(t=>t.civilian);return {x:t.x,y:t.y};}",
   );
   await shoot(page, t.x, t.y);
   expect(await scene(page, "s=>s.lives")).toBe(2);

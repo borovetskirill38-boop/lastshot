@@ -65,7 +65,9 @@ for (const map of ["saloon", "street", "tavern"]) {
       s.update(0, 300); s.update(0, 600); s.togglePause();
       return { frame: s.targets[0].view.getData("combat-image").frame.name, left: a.fireAt - s.clock, lives: s.lives };
     });
-    expect(aiming).toMatchObject({ frame: "0-2", lives: 3 });
+    expect(aiming).toMatchObject({ lives: 3 });
+    expect(Number(aiming.frame)).toBeGreaterThan(25);
+    expect(Number(aiming.frame)).toBeLessThan(47);
     expect(aiming.left).toBe(500);
     await expect(page.locator("#threat-notice")).toHaveCount(0);
     await expect(page.locator("#cover-status")).not.toContainText(/Вы открыты|За укрытием|Переход/);
@@ -80,7 +82,7 @@ for (const map of ["saloon", "street", "tavern"]) {
         pitch: [...(gameAudio as any).voices].find((v: any) => v.kind === "playerHurt")?.source.playbackRate.value };
       s.update(0, 100); const after = s.lives;
       const recoilFrame = s.targets[0].view.getData("combat-image").frame.name;
-      s.stance(true); s.update(0, 200); sounds.length = 0;
+      s.stance(true); s.update(0, 520); sounds.length = 0;
       const recoveredFrame = s.targets[0].view.getData("combat-image").frame.name;
       s.receiveFire(s.slots[0].x, s.slots[0].y, 1);
       const cover = { lives: s.lives, sounds: [...sounds] };
@@ -90,9 +92,10 @@ for (const map of ["saloon", "street", "tavern"]) {
       s.togglePause(); gameAudio.play = original;
       return { hurt, after, cover, dodge, recoilFrame, recoveredFrame };
     });
-    expect(result.hurt).toMatchObject({ lives: 2, sounds: ["enemyShot", "playerHurt"], frame: "0-2" });
-    expect(result.recoilFrame).toBe("0-3");
-    expect(result.recoveredFrame).toBe("0-0");
+    expect(result.hurt).toMatchObject({ lives: 2, sounds: ["enemyShot", "playerHurt"], frame: "48" });
+    expect(Number(result.recoilFrame)).toBeGreaterThan(48);
+    expect(Number(result.recoilFrame)).toBeLessThan(70);
+    expect(result.recoveredFrame).toBe("95");
     expect(result.hurt.pitch).toBeCloseTo(2 ** (-3 / 12), 4);
     expect(result.after).toBe(2);
     expect(result.cover).toEqual({ lives: 2, sounds: ["enemyShot", "wood"] });

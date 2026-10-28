@@ -15,6 +15,7 @@ import { maps, readMap, hitsTarget } from "./maps.js";
 import { levels, readProgress, recordWin } from "./rules.js";
 import { CoverMovement, playerCovers, planAttack, tickAttack, combatTiming } from "./combat.js";
 import { CombatView, animateGunman } from "./combat-view";
+import { prepareGunmanFrames } from "./gunman-frames";
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
 let storage: Storage;
@@ -88,6 +89,7 @@ class Town extends Phaser.Scene {
     preloadArt(this);
   }
   create() {
+    prepareGunmanFrames(this);
     this.world = this.add.container(0, 0);
     this.drawTown();
     this.combatView = new CombatView(this);
