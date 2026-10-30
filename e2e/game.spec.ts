@@ -1,4 +1,4 @@
-import { skipPrologue, skipIntro, setBossRandom } from "./helpers";
+import { skipPrologue, skipIntro, setBossRandom, worldPoint } from "./helpers";
 import { test, expect, Page } from "@playwright/test";
 async function scene<T>(page: Page, fn: string): Promise<T> {
   return page.evaluate(async (source) => {
@@ -12,9 +12,10 @@ async function shoot(page: Page, x: number, y: number) {
   const box = await page.locator("canvas").boundingBox();
   if (!box) throw Error("Missing canvas");
   const before = await scene<number>(page, "s=>s.ammo");
+  const point = await worldPoint(page, x, y);
   await page.mouse.click(
-    box.x + (x * box.width) / 960,
-    box.y + (y * box.height) / 540,
+    box.x + (point.x * box.width) / 960,
+    box.y + (point.y * box.height) / 540,
   );
   if (before > 0)
     await expect.poll(() => scene<number>(page, "s=>s.ammo")).toBe(before - 1);
@@ -50,11 +51,11 @@ test("first level is endless until three misses", async ({ page }) => {
   expect(await scene(page, "s=>s.lives")).toBe(3);
   expect(await scene(page, "s=>s.ended")).toBe(false);
   await expect(page.locator("#result")).toBeHidden();
-  await shoot(page, 20, 500);
+  await shoot(page, 100, 500);
   expect(await scene(page, "s=>s.lives")).toBe(2);
   await expect(page.locator("#life-count")).toHaveText("2/3");
-  await shoot(page, 20, 500);
-  await shoot(page, 20, 500);
+  await shoot(page, 100, 500);
+  await shoot(page, 100, 500);
   await expect(page.locator("#result-title")).toHaveText("Конец игры");
   await expect(page.locator("#result")).toHaveCSS("position", "fixed");
   await expect(page.locator("#life-count")).toHaveText("0/3");

@@ -1,9 +1,10 @@
 import { test, expect, Page } from "@playwright/test";
-import { skipPrologue, skipIntro } from "./helpers";
+import { skipPrologue, skipIntro, worldPoint } from "./helpers";
 
 async function shoot(page: Page, x: number, y: number) {
+  const point = await worldPoint(page, x, y);
   const box = await page.locator("canvas").boundingBox();
-  await page.mouse.click(box!.x + x * box!.width / 960, box!.y + y * box!.height / 540);
+  await page.mouse.click(box!.x + point.x * box!.width / 960, box!.y + point.y * box!.height / 540);
 }
 
 test("every saloon window contains a visible detailed room instead of a black recess", async ({ page }) => {

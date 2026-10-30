@@ -13,13 +13,15 @@ test("crouching only protects after lowering; standing cannot fire until above c
 });
 test("moving between covers exposes a crouched sheriff; changing lane dodges a locked aim", () => {
   const p = new CoverMovement(); p.stance(true, 0); p.tick(200);
-  assert.equal(p.move(-1, 200), true); p.tick(380);
+  assert.equal(p.move(-1, 200), true); p.tick(200 + combatTiming.move / 2);
   assert.equal(p.protected, false); assert.equal(p.receive(1), "hit");
-  assert.equal(p.move(-1, 380), false);
-  p.tick(560); assert.equal(p.protected, true); assert.equal(p.lane, 0);
-  p.stance(false, 560); p.tick(760);
+  assert.equal(p.move(-1, 200 + combatTiming.move / 2), false);
+  p.tick(200 + combatTiming.move); assert.equal(p.protected, true); assert.equal(p.lane, 0);
+  assert.equal(p.receive(1), "dodge"); // A locked shot cannot follow us into another cover.
+  assert.equal(p.receive(0), "cover");
+  p.stance(false, 200 + combatTiming.move); p.tick(400 + combatTiming.move);
   assert.equal(p.receive(1), "dodge"); assert.equal(p.receive(0), "hit");
-  assert.equal(p.move(-1, 760), false);
+  assert.equal(p.move(-1, 400 + combatTiming.move), false);
 });
 test("warnings last a full reaction interval even after a delayed first update; a gun fires once", () => {
   const a = planAttack(0);

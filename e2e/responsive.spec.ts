@@ -1,4 +1,4 @@
-import { skipPrologue, skipIntro } from "./helpers";
+import { skipPrologue, skipIntro, worldPoint } from "./helpers";
 import { test, expect, Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -107,7 +107,8 @@ test("aim stays aligned and the run survives window resizing and orientation cha
     await page.getByRole("button", { name: "Продолжить", exact: true }).click();
     await settle(page);
     const canvas = await page.locator("canvas").boundingBox();
-    await page.mouse.click(canvas!.x + canvas!.width * before.x / 960, canvas!.y + canvas!.height * before.y / 540);
+    const point = await worldPoint(page, before.x, before.y);
+    await page.mouse.click(canvas!.x + canvas!.width * point.x / 960, canvas!.y + canvas!.height * point.y / 540);
     hits++;
     await expect(page.locator("#stats")).toContainText(`Патроны ${6 - hits}/6`);
     const kills = await page.evaluate(async () => {

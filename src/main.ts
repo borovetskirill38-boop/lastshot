@@ -15,6 +15,7 @@ import { maps, readMap, hitsTarget } from "./maps.js";
 import { levels, readProgress, recordWin } from "./rules.js";
 import { CoverMovement, playerCovers, planAttack, tickAttack, combatTiming } from "./combat.js";
 import { CombatView, animateGunman } from "./combat-view";
+import { coverWorldView } from "./cover-geometry.js";
 import { prepareGunmanFrames } from "./gunman-frames";
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
@@ -92,7 +93,7 @@ class Town extends Phaser.Scene {
     prepareGunmanFrames(this);
     this.world = this.add.container(0, 0);
     this.drawTown();
-    this.combatView = new CombatView(this);
+    this.combatView = new CombatView(this, this.world);
     this.weapon = new ViewWeapon(this);
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
       if (!this.ended && !this.paused && !this.intro) this.weapon.aim(p.x, p.y);
@@ -153,7 +154,8 @@ class Town extends Phaser.Scene {
     this.weapon.setWeapon(this.weaponId);
     this.movement = new CoverMovement();
     this.hurtUntil = 0; this.bossRecoilUntil = 0;
-    this.world.setPosition(0, 0).setScale(1);
+    const camera = coverWorldView(1, 0);
+    this.world.setPosition(camera.x, camera.y).setScale(camera.zoom);
     this.combatView.reset(this.map.id);
     this.combatView.update(this.movement, this.clock);
     el("equipped-name").textContent = `В руках: ${armory.equipped.name}`;
@@ -225,7 +227,7 @@ class Town extends Phaser.Scene {
       phase === "hostage" ? "shield" : phase === "defeated" ? "hostage" : "boss");
     this.bossView.setDepth(p.pixelsPerMeter);
     this.world.add(this.bossView).sort("depth");
-    if (phase === "exposed") this.bossAimLane = this.movement.lane;
+    if (phase === "exposed") this.bossAimLane = this.movement.position;
   }
   move(direction: number) {
     if (this.ended || this.intro || this.paused) return;
@@ -254,10 +256,7 @@ class Town extends Phaser.Scene {
     gameAudio.play("enemyShot", pan);
     const outcome = this.movement.receive(lane);
     const hurt = outcome === "hit" && this.clock >= this.hurtUntil;
-    const point = this.world.getWorldTransformMatrix().transformPoint(x, y);
-    const endX = Math.max(-100, Math.min(1060, 480 + (lane - this.movement.position) * 650));
-    this.combatView.impact(point.x, point.y, this.clock, hurt, endX,
-      outcome === "cover" ? 470 - this.movement.duck * 190 : 500, outcome !== "hit");
+    const endX = this.combatView.incoming(x, y, this.clock, hurt, lane, outcome);
     if (hurt) {
       this.hurtUntil = this.clock + combatTiming.immunity;
       this.lives--; gameAudio.play("playerHurt"); this.hud();
@@ -289,8 +288,10 @@ class Town extends Phaser.Scene {
     let hitPerson = false;
     let outcome: "enemy" | "civilian" | "miss" = "miss";
     const pan = (x - 480) / 480;
-    const flash = this.add.circle(x, y, 13, 0xffe9a9, 0.8);
+    const coverHit = this.combatView.hitCover(x, y);
+    const flash = this.add.circle(x, y, coverHit ? 5 : 13, 0xffe9a9, 0.8).setDepth(9600);
     this.world.add(flash);
+    this.world.sort("depth");
     this.tweens.add({
       targets: flash,
       alpha: 0,
@@ -298,7 +299,10 @@ class Town extends Phaser.Scene {
       duration: 170,
       onComplete: () => flash.destroy(),
     });
-    if (selected === 4) {
+    if (coverHit) {
+      this.combatView.playerImpact(coverHit, this.clock);
+      if (selected === 0) { this.lives--; if (this.lives <= 0) this.finish(false); }
+    } else if (selected === 4) {
       const hit = this.encounter.fire(x, y, this.clock, this.map.occluders);
       if (hit === "hostage") {
         hitPerson = true;
@@ -340,7 +344,7 @@ class Town extends Phaser.Scene {
       }
     }
     armory.record(this.weaponId, outcome);
-    if (!hitPerson && hitsWood(x, y, this.slots, this.map.id)) gameAudio.play("wood", pan);
+    if (!hitPerson && (coverHit || hitsWood(x, y, this.slots, this.map.id))) gameAudio.play("wood", pan);
     this.hud();
   }
   finish(win: boolean) {
@@ -381,9 +385,8 @@ class Town extends Phaser.Scene {
     }
     const time = (this.clock += delta);
     this.movement.tick(time);
-    const pan = (this.movement.position - 1) * 30;
-    const zoom = 1 + Math.abs(pan) / 480 + this.movement.duck * 0.12;
-    this.world.setScale(zoom).setPosition(480 * (1 - zoom) - pan, 270 * (1 - zoom) - this.movement.duck * 24);
+    const camera = coverWorldView(this.movement.position, this.movement.duck);
+    this.world.setScale(camera.zoom).setPosition(camera.x, camera.y);
     this.weapon.coverAmount = this.movement.duck;
     this.weapon.update(delta, this.reloading);
     this.combatView.update(this.movement, time);
@@ -419,7 +422,7 @@ class Town extends Phaser.Scene {
         t.view.alpha = 0.4 + emergence * 0.6;
       }
       if (t.attack) {
-        const event = tickAttack(t.attack, time, this.movement.lane);
+        const event = tickAttack(t.attack, time, this.movement.position);
         if (event === "aim") t.expires = Math.max(t.expires, t.attack.fireAt + combatTiming.recoil);
         if (event === "fire") this.receiveFire(t.view.x - 5 * (t.scale ?? 1),
           t.view.y - 20 * (t.scale ?? 1), t.attack.lane);

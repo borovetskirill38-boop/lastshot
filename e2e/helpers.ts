@@ -1,4 +1,19 @@
 import { expect, Page } from "@playwright/test";
+import { coverWorldView } from "../src/cover-geometry.js";
+
+/** Native input must target the rendered world after camera travel/tilt. */
+export async function worldPoint(page: Page, x: number, y: number) {
+  // Standalone tests begin at the centre cover without importing from a server.
+  if (page.url() === "about:blank") {
+    const view = coverWorldView(1, 0);
+    return { x: x * view.zoom + view.x, y: y * view.zoom + view.y };
+  }
+  return page.evaluate(async p => {
+    const { game } = await import("/src/main.ts");
+    const s = game.scene.getScene("town") as any;
+    return s.world.getWorldTransformMatrix().transformPoint(p.x, p.y);
+  }, { x, y });
+}
 
 /** Existing gameplay tests pass through the same visible opening skip as players. */
 export async function skipPrologue(page: Page) {

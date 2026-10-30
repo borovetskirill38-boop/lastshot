@@ -34,11 +34,12 @@ for (const touch of [false, true]) {
           const nearImage = nearView.list.find((item: any) => item.type === "Image");
           const bounds = image.getBounds();
           const nearBounds = nearImage.getBounds();
+          const point = scene.world.getWorldTransformMatrix().transformPoint(far.x, far.y);
           const canvas = document.createElement("canvas");
           canvas.width = 1; canvas.height = 1;
           const drawing = canvas.getContext("2d")!;
           const sampleAlpha = (layer: any) => {
-            const local = layer.getWorldTransformMatrix().applyInverse(far.x, far.y);
+            const local = layer.getWorldTransformMatrix().applyInverse(point.x, point.y);
             const u = local.x + layer.displayOriginX;
             const v = local.y + layer.displayOriginY;
             if (u < 0 || v < 0 || u >= layer.frame.cutWidth || v >= layer.frame.cutHeight) return 0;
@@ -57,7 +58,7 @@ for (const touch of [false, true]) {
           nearView.destroy();
           scene.targets = [{ ...far, slot: scene.slots.indexOf(far), civilian: false,
             expires: Infinity, view: farView }];
-          return { x: far.x, y: far.y, alpha, blockers,
+          return { x: point.x, y: point.y, alpha, blockers,
             top: bounds.top, bottom: bounds.bottom, left: bounds.left, right: bounds.right,
             farHeight: bounds.height, nearHeight: nearBounds.height,
             farDistance: far.distanceM, nearDistance: near.distanceM };

@@ -1,4 +1,4 @@
-import { skipPrologue, skipIntro } from "./helpers";
+import { skipPrologue, skipIntro, worldPoint } from "./helpers";
 import { test, expect, Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -11,8 +11,9 @@ const locations = [
   { id: "tavern", title: "Внутри салуна" },
 ] as const;
 async function shot(page: Page, x: number, y: number) {
+  const point = await worldPoint(page, x, y);
   const canvas = await page.locator("canvas").boundingBox();
-  await page.mouse.click(canvas!.x + canvas!.width * x / 960, canvas!.y + canvas!.height * y / 540);
+  await page.mouse.click(canvas!.x + canvas!.width * point.x / 960, canvas!.y + canvas!.height * point.y / 540);
 }
 async function unlock(page: Page) {
   await page.addInitScript(() => localStorage.setItem("lastshot-progress", JSON.stringify({ unlocked: 5, best: [200, 400] })));
@@ -239,7 +240,7 @@ test("tavern curved foreground masks the waist and blocks covered shots at the c
     const context = canvas.getContext("2d")!;
     context.drawImage(source, 0, 0);
     const alpha = (x: number, y: number) => {
-      const local = image.getWorldTransformMatrix().applyInverse(x, y);
+      const local = { x: x - image.x, y: y - image.y };
       return context.getImageData(Math.round(local.x + image.displayOriginX),
         Math.round(local.y + image.displayOriginY), 1, 1).data[3];
     };

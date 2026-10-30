@@ -12,12 +12,30 @@
   no per-shot texture creation or per-frame pixel processing. A 600ms recovery
   fits Billy's existing 650ms retreat. Frame sampling, shoulder motion and muzzle
   flash use gameplay time; pause freezes them and no warning indicators return.
-- `player-covers.webp`: original transparent2172×724 props: oak barrels,
-  freight wagon and overturned saloon table. Measured cropped frames avoid
-  gutters; existing crate artwork completes the nine map-specific positions.
-- Scenery and actors share one transformed world container; viewmodel, foreground
-  player cover, tracers and hurt border use separate fixed screen layers. Native
-  pointer input is transformed back into world coordinates for cover/hit tests.
+- `player-covers.webp`: replacement original transparent1312×1199 atlas: oak
+  barrels, closed supply crates, a freight wagon and a complete overturned oak
+  table. The four separate silhouettes have measured disjoint bounds in
+  `cover-geometry.js`; table legs no longer include a neighbouring wagon wheel.
+  All nine player positions use this shared texture, preserving each frame's
+  aspect ratio. Dimensions are about1.3m high, with floor contacts calibrated
+  against each painting's horizon. The original generated PNG is retained outside
+  the repository; this version is encoded at quality94 with transparency intact.
+- Scenery, actors, player cover and cached contact shadows share one transformed
+  world container. Metric anchors stay immutable; depth determines lateral
+  parallax. Crouching tilts the whole2.5D view without independently raising
+  furniture off the painted floor or changing zoom. The viewmodel, tracers and
+  hurt border use separate screen layers. Native pointer input is transformed
+  back into world coordinates, then actual sprite alpha stops shots on near
+  cover; empty gaps remain open. Up to24 wood marks retain local prop coordinates
+  and move with the same object. Incoming splinters/tracers also follow their
+  world contact instead of a fixed screen endpoint. Reset reuses textures and
+  destroys the previous prop/shadow objects; no pixel processing occurs per frame.
+- `cover-ground.ts` caches the actual bottom90px of each painting as clean floor
+  material, reflecting unobstructed scanline intervals into hidden/outside areas.
+  Two-pixel strips scroll their UVs by ground depth, matching the lateral movement
+  of prop feet. A28px fade and polygon holes preserve the original stairs, bar and
+  painted barrels. Only frame metadata changes during travel; no canvas redraw or
+  texture upload occurs per frame. Both WebGL and Canvas frame caches are updated.
   Both new atlases are embedded inline in the standalone HTML (quality94 WebP).
 
 Original AI-generated artwork created for this project. Images are embedded as

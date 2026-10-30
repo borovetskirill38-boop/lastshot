@@ -86,7 +86,7 @@ for (const map of ["saloon", "street", "tavern"]) {
       const recoveredFrame = s.targets[0].view.getData("combat-image").frame.name;
       s.receiveFire(s.slots[0].x, s.slots[0].y, 1);
       const cover = { lives: s.lives, sounds: [...sounds] };
-      s.move(-1); s.update(0, 360); s.stance(false); s.update(0, 200); sounds.length = 0;
+      s.move(-1); s.update(0, 520); s.stance(false); s.update(0, 200); sounds.length = 0;
       s.receiveFire(s.slots[0].x, s.slots[0].y, 1);
       const dodge = { lives: s.lives, sounds: [...sounds] };
       s.togglePause(); gameAudio.play = original;

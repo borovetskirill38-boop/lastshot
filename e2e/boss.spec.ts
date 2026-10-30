@@ -1,7 +1,7 @@
 import { test, expect, Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { maps } from "../src/maps.js";
-import { skipPrologue, skipIntro, setBossRandom } from "./helpers";
+import { skipPrologue, skipIntro, setBossRandom, worldPoint } from "./helpers";
 
 async function snapshot(page: Page) {
   return page.evaluate(async () => {
@@ -13,8 +13,9 @@ async function snapshot(page: Page) {
   });
 }
 async function shoot(page: Page, x: number, y: number, touch = false) {
+  const point = await worldPoint(page, x, y);
   const canvas = await page.locator("canvas").boundingBox();
-  const px = canvas!.x + canvas!.width * x / 960, py = canvas!.y + canvas!.height * y / 540;
+  const px = canvas!.x + canvas!.width * point.x / 960, py = canvas!.y + canvas!.height * point.y / 540;
   if (touch) await page.touchscreen.tap(px, py);
   else await page.mouse.click(px, py);
 }
