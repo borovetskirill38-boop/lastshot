@@ -54,6 +54,10 @@
             <span class="telegraph-emblem" aria-hidden="true">ϟ</span>
             <span><small>ОСОБОЕ ПОРУЧЕНИЕ · НОВЫЙ РЕЖИМ</small><b>Линия жизни</b><span id="telegraph-description">Восстанови три коммутатора за две минуты. Логика, укрытия и связь под огнём.</span><small id="telegraph-best">ПРЕМИЯ +1 200 ОЧКОВ</small></span>
           </button>
+          <button id="investigation-start" type="button" class="investigation-entry" disabled aria-describedby="investigation-description">
+            <span class="investigation-emblem" aria-hidden="true">⌕</span>
+            <span><small>ДЕТЕКТИВНАЯ ИСТОРИЯ · НОВЫЙ РЕЖИМ</small><b>Дело о пропавшей казне</b><span id="investigation-description">Осмотри город, проверь алиби и найди виновного. Шесть вариантов дела. Без спешки.</span><small id="investigation-best">ПРЕМИЯ ДО +1 500 ОЧКОВ</small></span>
+          </button>
           <p class="instructions">
             Стреляй по бандитам в красных платках. Береги жителей в зелёном.<br />Клик
             / касание — выстрел · R — перезарядка · Esc — пауза.<br />
@@ -70,7 +74,7 @@
             <h1 id="arsenal-title" tabindex="-1">Арсенал</h1>
             <p>Выбери спутника для следующей истории.</p>
             <p class="armory-wallet">На счету <strong id="arsenal-balance">0</strong> <span>очков</span></p>
-            <p class="economy-note">100 очков за бандита. За победу — премия от 300 до 1 200 очков.<br />Покупай оружие по порядку. Заработанное остаётся даже при поражении или выходе из боя.</p>
+            <p class="economy-note">100 очков за бандита. За победу — премия от 300 до 1 200 очков; за раскрытое дело — до 1 500.<br />Покупай оружие по порядку. Заработанное остаётся даже при поражении или выходе из боя.</p>
           </div>
           <div class="armory-layout">
             <div class="weapon-rack">
@@ -104,6 +108,20 @@
               <p class="arsenal-ammo-note">Резерв патронов не ограничен. Вместимость определяет число выстрелов до перезарядки.</p>
             </article>
           </div>
+        </section>
+        <section id="investigation" hidden aria-labelledby="case-title">
+          <div class="case-topline"><button id="case-back" type="button">← Главное меню</button><span>DUSTY TOWN · БЮРО ШЕРИФА · 1886</span></div>
+          <div class="case-heading"><p class="eyebrow">ДЕТЕКТИВНАЯ ИСТОРИЯ</p><h1 id="case-title" tabindex="-1">Дело о пропавшей казне</h1><p>Между 18:10 и 18:20 из кассы у салуна исчезло жалованье патруля. К ней подходили трое. Найди улики, сопоставь их с показаниями и верни городу деньги.</p></div>
+          <div class="case-statusline"><p id="case-progress" role="status"></p><button id="case-notebook-open" type="button">Блокнот и обвинение</button></div>
+          <p id="case-save-note" class="case-save-note"></p>
+          <div id="case-fieldwork">
+            <nav id="case-locations" aria-label="Места расследования"></nav>
+            <div class="case-workspace">
+              <article class="case-scene-card"><h2 id="case-location-title"></h2><p id="case-location-caption"></p><div id="case-scene" role="group" aria-label="Осмотр места"><div id="case-hotspots"></div></div><div id="case-witness"></div><p class="case-scene-help">Выбирай отмеченные предметы и собеседника. Собранные улики доступны в блокноте. Время не ограничено.</p></article>
+              <aside class="case-journal" aria-labelledby="case-journal-title"><p class="case-paper-label">ПОЛЕВОЙ БЛОКНОТ КАРТЕРА</p><h2 id="case-journal-title">Нити одного дела</h2><p>1. Собери шесть улик.<br />2. Поговори с каждым и предъяви улику, проверяющую его алиби.<br />3. Составь обвинение в блокноте.</p><h3>Вещественные улики</h3><div id="case-evidence-list"></div><h3>Проверка алиби</h3><div id="case-suspect-list"></div></aside>
+            </div>
+          </div>
+          <article id="case-outcome" hidden aria-labelledby="case-outcome-title"><p class="eyebrow">ОТЧЁТ ШЕРИФА КАРТЕРА</p><h2 id="case-outcome-title" tabindex="-1"></h2><p id="case-outcome-text"></p><p id="case-outcome-reward"></p><div class="case-outcome-actions"><button id="case-new" type="button">Взяться за новое дело</button><button id="case-outcome-back" type="button">В главное меню</button></div></article>
         </section>
         <section id="play" hidden>
           <div class="hud">
@@ -262,6 +280,12 @@
         </div>
         <div class="relay-bottomline"><button id="relay-close" type="button">← К укрытию</button><button id="relay-pause" type="button">Пауза</button><button id="relay-abort" type="button">Завершить попытку</button></div>
       </div>
+    </dialog>
+    <dialog id="case-detail-dialog" aria-labelledby="case-detail-title">
+      <div class="case-dialog-shell"><div class="case-detail-heading"><span id="case-detail-icon" aria-hidden="true"></span><div><p id="case-detail-kind" class="eyebrow"></p><h2 id="case-detail-title"></h2></div></div><p id="case-detail-text"></p><div id="case-person-profile"></div><div id="case-question"><label for="case-proof">Сопоставить показания с уликой</label><select id="case-proof"></select><button id="case-present" type="button">Предъявить улику</button></div><p id="case-detail-feedback" role="status"></p><div class="case-dialog-actions"><button id="case-collect" type="button">Забрать улику</button><button id="case-detail-close" type="button">← Вернуться к осмотру</button></div></div>
+    </dialog>
+    <dialog id="case-notebook-dialog" aria-labelledby="case-notebook-title">
+      <div class="case-dialog-shell"><p class="eyebrow">ДОКАЗАТЕЛЬСТВА · ПОКАЗАНИЯ · ВЫВОД</p><h2 id="case-notebook-title" tabindex="-1">Блокнот шерифа</h2><div id="case-notebook-evidence"></div><h3>Показания подозреваемых</h3><div id="case-notebook-testimony"></div><form id="case-report"><h3>Обвинение</h3><p id="case-report-help"></p><label for="case-accused">Кто украл казну?</label><select id="case-accused" required></select><label for="case-method">Как вскрыли кассу?</label><select id="case-method" required></select><label for="case-cache">Где спрятаны деньги?</label><select id="case-cache" required></select><button id="case-accuse" type="submit" disabled>Предъявить обвинение</button></form><p id="case-report-feedback" role="status"></p><button id="case-notebook-close" type="button">← Закрыть блокнот</button></div>
     </dialog>
     <script type="module" src="/src/main.ts"></script>
   </body>

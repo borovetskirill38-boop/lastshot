@@ -229,3 +229,11 @@ rendered scenery with the updated props and depth order.
   Mobile portrait places text below the image; short landscape uses two columns.
   Reduced-motion preferences remove the slow illustration zoom. Returning from
   gameplay does not reopen the story; every fresh page load begins it again.
+
+## Detective investigation
+
+The untimed investigation reuses the original `town.webp`, `street-dusk.webp`
+and `tavern.webp` paintings. The merchant, ranch hand and clerk use the civilian
+row of `people.webp` with CSS portrait crops. Clue markers and notebook icons are
+original inline SVG UI symbols; all testimony and evidence stay accessible HTML.
+The journal uses CSS paper and ink colors. No third-party artwork was added.

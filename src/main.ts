@@ -19,6 +19,7 @@ import { coverWorldView } from "./cover-geometry.js";
 import { prepareGunmanFrames } from "./gunman-frames";
 import { TelegraphMission, telegraphMode, telegraphKey, readTelegraphRecord, recordTelegraphWin, formatRelayTime } from "./telegraph.js";
 import { RelayPanel, TelegraphView } from "./telegraph-view";
+import { InvestigationView } from "./investigation-view";
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
 let storage: Storage;
@@ -41,6 +42,11 @@ let telegraphRecord = readTelegraphRecord(storage);
 const modes = [...levels, telegraphMode];
 export const gameAudio = new GameAudio();
 const armory = new Armory(storage);
+const investigation = new InvestigationView(storage, {
+  exit: () => { menu(); el("investigation-start").focus({ preventScroll: true }); },
+  reward: errors => armory.rewardInvestigation(errors),
+  sound: () => gameAudio.play("hover"), persisted: () => armory.persisted,
+});
 const introDialogue = new IntroDialogue();
 const openingStory = new OpeningStory(() => menu());
 type Target = {
@@ -603,6 +609,7 @@ function updateMapPicker() {
 
 function menu() {
   introDialogue.close();
+  investigation.close();
   scene.relayPanel?.close();
   gameAudio.stop();
   gameAudio.setMenu(!openingStory.active);
@@ -614,12 +621,14 @@ function menu() {
   el("menu").hidden = false;
   el("arsenal").hidden = true;
   el<HTMLButtonElement>("arsenal-open").disabled = !townReady;
-  document.body.classList.remove("in-arsenal", "in-play", "boss-mode", "telegraph-mode");
+  document.body.classList.remove("in-arsenal", "in-play", "boss-mode", "telegraph-mode", "in-investigation");
   document.body.classList.toggle("in-menu", !openingStory.active);
   window.scrollTo(0, 0);
   document.querySelector(".saloon-transition")?.remove();
   updateMapPicker();
   el<HTMLButtonElement>("telegraph-start").disabled = !townReady;
+  el<HTMLButtonElement>("investigation-start").disabled = !townReady;
+  investigation.updateEntry();
   el("telegraph-best").textContent = `ПРЕМИЯ +${economy.victoryBonuses[5].toLocaleString("ru-RU")} ОЧКОВ${telegraphRecord.bestMs ? ` · РЕКОРД ${formatRelayTime(telegraphRecord.bestMs)}` : ""}`;
   el("levels").replaceChildren();
   levels.forEach((l, i) => {
@@ -654,7 +663,8 @@ function menu() {
 function start(i: number) {
   if (!townReady || openingStory.active || !Number.isInteger(i) || i < 0 || i >= modes.length
     || (i < levels.length && i >= progress.unlocked)) return;
-  document.body.classList.remove("in-menu", "in-arsenal");
+  investigation.close();
+  document.body.classList.remove("in-menu", "in-arsenal", "in-investigation");
   document.body.classList.add("in-play");
   document.body.classList.toggle("boss-mode", i === 4);
   document.body.classList.toggle("telegraph-mode", i === 5);
@@ -722,6 +732,19 @@ document.addEventListener("keydown", (event) => {
 });
 el("reload").onclick = () => scene.reload();
 el("telegraph-start").onclick = () => start(5);
+el("investigation-start").onclick = () => {
+  if (!townReady || openingStory.active) return;
+  introDialogue.close(); scene.relayPanel.close(); scene.ended = true; scene.intro = false;
+  gameAudio.stop(); gameAudio.setPaused(false); gameAudio.setRoom("arsenal");
+  for (const id of ["menu", "arsenal", "play", "result"]) el(id).hidden = true;
+  document.body.classList.remove("in-menu", "in-arsenal", "in-play", "boss-mode", "telegraph-mode");
+  document.body.classList.add("in-investigation");
+  document.querySelector(".saloon-transition")?.remove();
+  investigation.open(); window.scrollTo(0, 0); gameAudio.play("door");
+};
+el("investigation-start").addEventListener("pointerenter", event => {
+  if (event.pointerType !== "touch" && !el<HTMLButtonElement>("investigation-start").disabled) gameAudio.play("hover");
+});
 el("telegraph-start").addEventListener("pointerenter", event => {
   if (event.pointerType !== "touch" && !el<HTMLButtonElement>("telegraph-start").disabled) gameAudio.play("hover");
 });

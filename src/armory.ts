@@ -1,4 +1,4 @@
-import { getWeapon, weapons, readArsenal, selectWeapon, recordShot, saveArsenal, nextWeapon, purchaseWeapon, awardVictory, economy } from "./arsenal.js";
+import { getWeapon, weapons, readArsenal, selectWeapon, recordShot, saveArsenal, nextWeapon, purchaseWeapon, awardVictory, awardInvestigation, economy } from "./arsenal.js";
 import weaponIcons from "./visuals/weapon-icons.webp?inline";
 import longGunIcons from "./visuals/long-gun-icons.webp?inline";
 
@@ -86,6 +86,14 @@ export class Armory {
 
   get balance() { return this.state.balance; }
   get persisted() { return this.saved; }
+
+  rewardInvestigation(errors: number) {
+    const before = this.balance;
+    this.state = awardInvestigation(this.state, errors);
+    this.saved = saveArsenal(this.storage, this.state);
+    this.renderFunds();
+    return this.balance - before;
+  }
 
   private renderFunds() {
     el("arsenal-balance").textContent = this.balance.toLocaleString("ru-RU");

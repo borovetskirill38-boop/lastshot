@@ -3,7 +3,7 @@
 /** @typedef {"enemy" | "civilian" | "miss"} ShotOutcome */
 
 export const arsenalKey = "lastshot-arsenal";
-export const economy = { enemyBounty: 100, victoryBonuses: [0, 300, 450, 600, 900, 1200], maxBalance: 999999999 };
+export const economy = { enemyBounty: 100, victoryBonuses: [0, 300, 450, 600, 900, 1200], investigationBonus: 1500, investigationPenalty: 300, maxBalance: 999999999 };
 export const weapons = [
   {
     id: "last-word",
@@ -181,6 +181,15 @@ export function purchaseWeapon(state, id) {
 export function awardVictory(state, level) {
   if (!Number.isInteger(level) || level < 1 || level >= economy.victoryBonuses.length) return state;
   return { ...state, balance: Math.min(economy.maxBalance, state.balance + economy.victoryBonuses[level]) };
+}
+
+/** The case controller calls this only on the active -> won transition.
+ * @param {ArsenalState} state @returns {ArsenalState}
+ */
+export function awardInvestigation(state, errors) {
+  if (!Number.isInteger(errors) || errors < 0 || errors >= 3) return state;
+  return { ...state, balance: Math.min(economy.maxBalance,
+    state.balance + economy.investigationBonus - errors * economy.investigationPenalty) };
 }
 
 /** Each accepted shot has exactly one outcome; civilian hits are a subset of hits.
