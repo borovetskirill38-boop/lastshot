@@ -30,33 +30,45 @@ for (const map of ["saloon", "street", "tavern"]) {
         return peak;
       });
       const zoom = s.world.scaleX;
-      const materialAtFoot = () => {
-        const image = cv.covers[1].image;
-        const strip = cv.ground.strips.find((p: any) => p.y <= image.y && p.y + 2 > image.y
-          && p.x <= image.x && p.x + p.frame.width > image.x);
-        return strip ? strip.frame.cutX + image.x - strip.x : NaN;
+      // Compare actual rendered floor pixels in map coordinates, compensating
+      // only for the normal camera transform. A scrolling overlay fails this.
+      const floorPixels = async () => {
+        const paused = s.paused; s.paused = true;
+        const image = await new Promise<HTMLImageElement>(resolve => game.renderer.snapshot(resolve));
+        const canvas = document.createElement("canvas"); canvas.width = 24; canvas.height = 3;
+        const ctx = canvas.getContext("2d")!;
+        const p = s.world.getWorldTransformMatrix().transformPoint(120, 534);
+        ctx.drawImage(image, p.x, p.y, 24 * s.world.scaleX, 3 * s.world.scaleY, 0, 0, 24, 3);
+        const pixels = Array.from(ctx.getImageData(0, 0, 24, 3).data);
+        s.paused = paused;
+        return pixels;
       };
-      const material = materialAtFoot();
       s.stance(true); s.update(0, 200);
+      const floor = await floorPixels();
       const grounded = cv.covers.every((c: any, i: number) => c.image.y === baseline[i].y
         && c.shadow.x === c.image.x && Math.abs(c.shadow.y - c.image.y) <= 2
         && c.image.displayWidth === baseline[i].width && c.image.displayHeight === baseline[i].height);
       s.move(-1); s.update(0, 260);
       const crossing = { safe: s.movement.protected, moving: s.movement.moving };
+      const halfwayFloor = await floorPixels();
       s.update(0, 260);
-      const floorDrift = Math.abs(materialAtFoot() - material);
+      const arrivedFloor = await floorPixels();
+      const floorError = Math.max(...[halfwayFloor, arrivedFloor].map(pixels =>
+        Math.sqrt(pixels.reduce((sum, value, i) => sum + (value - floor[i]) ** 2, 0) / pixels.length)));
+      const floorOpaque = floor.every((value, i) => i % 4 !== 3 || value === 255);
       const sameAnchors = cv.covers.every((c: any, i: number) => JSON.stringify(c.anchor) === JSON.stringify(baseline[i].anchor));
       s.move(1); s.update(0, 520); s.stance(false); s.update(0, 200);
       const returns = cv.covers.every((c: any, i: number) => Math.abs(c.image.x - baseline[i].x) < 1e-6 && c.image.y === baseline[i].y);
       const noZoom = s.world.scaleX === zoom;
       s.togglePause();
-      return { parented, frameGaps, grounded, crossing, sameAnchors, returns, noZoom, floorDrift,
+      return { parented, frameGaps, grounded, crossing, sameAnchors, returns, noZoom, floorError, floorOpaque,
         cached: game.textures.getTextureKeys().length === textures };
     });
     expect(geometry).toMatchObject({ parented: true, grounded: true, crossing: { safe: false, moving: true },
       sameAnchors: true, returns: true, noZoom: true, cached: true });
     expect(Math.max(...geometry.frameGaps)).toBeLessThan(128);
-    expect(geometry.floorDrift).toBeLessThan(3);
+    expect(geometry.floorOpaque).toBe(true);
+    expect(geometry.floorError).toBeLessThan(12);
 
     const point = await page.evaluate(async () => {
       const { game } = await import("/src/main.ts"); const s = game.scene.getScene("town") as any;

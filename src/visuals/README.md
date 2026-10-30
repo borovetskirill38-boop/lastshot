@@ -30,12 +30,10 @@
   and move with the same object. Incoming splinters/tracers also follow their
   world contact instead of a fixed screen endpoint. Reset reuses textures and
   destroys the previous prop/shadow objects; no pixel processing occurs per frame.
-- `cover-ground.ts` caches the actual bottom90px of each painting as clean floor
-  material, reflecting unobstructed scanline intervals into hidden/outside areas.
-  Two-pixel strips scroll their UVs by ground depth, matching the lateral movement
-  of prop feet. A28px fade and polygon holes preserve the original stairs, bar and
-  painted barrels. Only frame metadata changes during travel; no canvas redraw or
-  texture upload occurs per frame. Both WebGL and Canvas frame caches are updated.
+- The floor remains in the original map painting and shares its camera transform
+  with the scenery. There is no separately scrolling floor texture, sliced floor
+  overlay or near-ground UV animation. Lateral movement changes the viewpoint
+  while the boards and stones retain their place relative to the map.
   Both new atlases are embedded inline in the standalone HTML (quality94 WebP).
 
 Original AI-generated artwork created for this project. Images are embedded as

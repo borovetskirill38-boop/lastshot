@@ -1,7 +1,6 @@
 import Phaser from "phaser";
 import { playerCovers, CoverMovement } from "./combat.js";
 import { coverAnchor, coverFrames, projectPlayerCover } from "./cover-geometry.js";
-import { CoverGround } from "./cover-ground";
 import { sampleGunmanFrame, gunmanAnimation } from "./enemy-animation.js";
 
 type CoverHit = { index: number; u: number; v: number };
@@ -12,7 +11,6 @@ type PlacedCover = { image: Phaser.GameObjects.Image; shadow: Phaser.GameObjects
 export class CombatView {
   readonly foreground: Phaser.GameObjects.Container;
   readonly feedback: Phaser.GameObjects.Graphics;
-  readonly ground: CoverGround;
   private covers: PlacedCover[] = [];
   private marks: CoverHit[] = [];
   private scars: Phaser.GameObjects.Graphics;
@@ -20,7 +18,6 @@ export class CombatView {
   private hurtUntil = 0;
   private map = "saloon";
   constructor(private scene: Phaser.Scene, private world: Phaser.GameObjects.Container) {
-    this.ground = new CoverGround(scene, world);
     const texture = scene.textures.get("player-covers");
     for (const [key, [x, y, w, h]] of Object.entries(coverFrames)) if (!texture.has(key)) texture.add(key, 0, x, y, w, h);
     if (!scene.textures.exists("cover-contact-shadow")) {
@@ -41,7 +38,6 @@ export class CombatView {
   }
   reset(map: string) {
     this.map = map;
-    this.ground.reset(map);
     for (const { image, shadow } of this.covers) { image.destroy(); shadow.destroy(); }
     this.covers = [];
     for (const [i, cover] of playerCovers[map as keyof typeof playerCovers].entries()) {
@@ -60,7 +56,6 @@ export class CombatView {
     this.impacts = []; this.marks = []; this.hurtUntil = 0; this.feedback.clear(); this.scars.clear();
   }
   update(player: CoverMovement, now: number) {
-    this.ground.update(player.position);
     for (const { image, shadow, anchor, frame } of this.covers) {
       const p = projectPlayerCover(this.map, anchor, player.position);
       image.setPosition(p.x, p.groundY).setDisplaySize(p.width, p.height);
