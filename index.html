@@ -50,6 +50,10 @@
             <p id="map-description" role="status"></p>
           </div>
           <div id="levels"></div>
+          <button id="telegraph-start" type="button" class="telegraph-entry" disabled aria-describedby="telegraph-description">
+            <span class="telegraph-emblem" aria-hidden="true">ϟ</span>
+            <span><small>ОСОБОЕ ПОРУЧЕНИЕ · НОВЫЙ РЕЖИМ</small><b>Линия жизни</b><span id="telegraph-description">Восстанови три коммутатора за две минуты. Логика, укрытия и связь под огнём.</span><small id="telegraph-best">ПРЕМИЯ +1 200 ОЧКОВ</small></span>
+          </button>
           <p class="instructions">
             Стреляй по бандитам в красных платках. Береги жителей в зелёном.<br />Клик
             / касание — выстрел · R — перезарядка · Esc — пауза.<br />
@@ -66,7 +70,7 @@
             <h1 id="arsenal-title" tabindex="-1">Арсенал</h1>
             <p>Выбери спутника для следующей истории.</p>
             <p class="armory-wallet">На счету <strong id="arsenal-balance">0</strong> <span>очков</span></p>
-            <p class="economy-note">100 очков за бандита. За победу — премия от 300 до 900 очков.<br />Покупай оружие по порядку. Заработанное остаётся даже при поражении или выходе из боя.</p>
+            <p class="economy-note">100 очков за бандита. За победу — премия от 300 до 1 200 очков.<br />Покупай оружие по порядку. Заработанное остаётся даже при поражении или выходе из боя.</p>
           </div>
           <div class="armory-layout">
             <div class="weapon-rack">
@@ -106,7 +110,7 @@
             <span id="level-name"></span
             ><span id="stats" aria-live="polite"></span>
           </div>
-          <p class="loadout-readout"><span id="equipped-name"></span><span id="cover-status" role="status"></span><span id="boss-notice" role="status" hidden></span></p>
+          <p class="loadout-readout"><span id="equipped-name"></span><span id="cover-status" role="status"></span><span id="relay-status" hidden></span><span id="boss-notice" role="status" hidden></span></p>
           <div id="game-viewport">
             <div id="game">
               <div id="combat-ui" aria-hidden="true">
@@ -127,6 +131,7 @@
           <div class="controls">
             <button id="back">← Уровни</button><button id="pause">Пауза</button
             ><button id="reload">Перезарядить · R</button>
+            <button id="relay-interact" type="button" hidden aria-label="Открыть коммутатор">Щиток · E</button>
             <div class="movement-controls" role="group" aria-label="Перемещение и укрытие">
               <button id="move-left" aria-label="Влево к укрытию">← <small>A</small></button>
               <button id="crouch" aria-label="Пригнуться за укрытие" aria-pressed="false">↓ Укрыться <small>S</small></button>
@@ -244,6 +249,18 @@
             <button id="dialogue-next" type="button">Дальше →</button>
           </div>
         </article>
+      </div>
+    </dialog>
+    <dialog id="relay-dialog" aria-labelledby="relay-title" aria-describedby="relay-help">
+      <div class="relay-shell">
+        <div class="relay-topline"><span>ТЕЛЕГРАФ DUSTY TOWN · 1886</span><span id="relay-clock" role="timer" aria-label="Оставшееся время">2:00</span></div>
+        <h2 id="relay-title">Коммутатор</h2>
+        <p id="relay-help">Поверни контакты и соедини вход слева с выходом справа. Подай сигнал до конца времени. Клик, касание или Enter — поворот.</p>
+        <div class="relay-main">
+          <div class="relay-board-wrap"><div id="relay-board" role="group" aria-label="Схема контактов 4 на 4"></div></div>
+          <div class="relay-side"><p id="relay-connection" role="status"></p><p class="relay-keyboard">Стрелки — выбрать контакт.<br />E или Esc — закрыть щиток.<br />Собранная часть схемы сохраняется до конца попытки.</p><button id="relay-connect" type="button" disabled>Подать сигнал</button></div>
+        </div>
+        <div class="relay-bottomline"><button id="relay-close" type="button">← К укрытию</button><button id="relay-pause" type="button">Пауза</button><button id="relay-abort" type="button">Завершить попытку</button></div>
       </div>
     </dialog>
     <script type="module" src="/src/main.ts"></script>

@@ -28,7 +28,7 @@ test("every mode has short character lines and the boss conversation includes Su
 
 test("unknown inputs fall back safely and a replay gets fresh conversation data", () => {
   const original = getIntroDialogue(0, "saloon");
-  for (const level of [-1, 5, 0.5, NaN, "4", null]) {
+  for (const level of [-1, 6, 0.5, NaN, "4", null]) {
     assert.deepEqual(getIntroDialogue(level, "saloon"), original);
   }
   for (const location of ["unknown", "__proto__", "toString", null]) {

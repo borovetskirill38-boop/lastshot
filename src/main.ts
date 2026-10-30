@@ -17,6 +17,8 @@ import { CoverMovement, playerCovers, planAttack, tickAttack, combatTiming } fro
 import { CombatView, animateGunman } from "./combat-view";
 import { coverWorldView } from "./cover-geometry.js";
 import { prepareGunmanFrames } from "./gunman-frames";
+import { TelegraphMission, telegraphMode, telegraphKey, readTelegraphRecord, recordTelegraphWin, formatRelayTime } from "./telegraph.js";
+import { RelayPanel, TelegraphView } from "./telegraph-view";
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
 let storage: Storage;
@@ -35,6 +37,8 @@ let progress = readProgress(storage),
 let townReady = false;
 let selectedMap = readMap(storage);
 let mapSaved = true;
+let telegraphRecord = readTelegraphRecord(storage);
+const modes = [...levels, telegraphMode];
 export const gameAudio = new GameAudio();
 const armory = new Armory(storage);
 const introDialogue = new IntroDialogue();
@@ -57,6 +61,13 @@ class Town extends Phaser.Scene {
   weapon!: ViewWeapon;
   world!: Phaser.GameObjects.Container;
   combatView!: CombatView;
+  relayPanel!: RelayPanel;
+  relayView!: TelegraphView;
+  relay?: TelegraphMission;
+  relaySpawned = 0;
+  relayTime = "";
+  get isTelegraph() { return selected === 5; }
+  get rules() { return modes[selected]; }
   movement = new CoverMovement();
   hurtUntil = 0;
   bossAimLane = 1;
@@ -96,17 +107,28 @@ class Town extends Phaser.Scene {
     this.drawTown();
     this.combatView = new CombatView(this, this.world);
     this.weapon = new ViewWeapon(this);
+    this.relayView = new TelegraphView(this, this.world, this.combatView);
+    this.relayPanel = new RelayPanel({
+      turn: (station, cell) => this.turnRelay(station, cell),
+      connect: station => this.connectRelay(station),
+      pause: () => this.togglePause(), abort: () => this.finish(false),
+      closed: () => el<HTMLButtonElement>(this.paused ? "pause" : "relay-interact").focus({ preventScroll: true }),
+    });
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
-      if (!this.ended && !this.paused && !this.intro) this.weapon.aim(p.x, p.y);
+      if (!this.ended && !this.paused && !this.intro && !this.relayPanel.active) this.weapon.aim(p.x, p.y);
     });
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
       const point = this.world.getWorldTransformMatrix().applyInverse(p.x, p.y);
+      if (this.isTelegraph && this.canRepair && this.relayView.hit(point.x, point.y, this.movement.lane)) {
+        this.openRelay(); return;
+      }
       this.shoot(point.x, point.y);
     });
     this.input.keyboard?.on("keydown-R", () => this.reload());
-    this.input.keyboard?.on("keydown-ESC", () => this.togglePause());
+    this.input.keyboard?.on("keydown-ESC", (event: KeyboardEvent) => { if (!event.repeat) { if (this.relayPanel.active) this.relayPanel.close(true); else this.togglePause(); } });
+    this.input.keyboard?.on("keydown-E", (event: KeyboardEvent) => { if (!event.repeat) this.openRelay(); });
     this.input.keyboard?.on("keydown", (event: KeyboardEvent) => {
-      if (event.repeat || this.intro || this.ended || this.paused) return;
+      if (event.repeat || this.intro || this.ended || this.paused || this.relayPanel.active) return;
       if (["KeyA", "ArrowLeft", "KeyD", "ArrowRight", "KeyS", "ArrowDown", "KeyW", "ArrowUp"].includes(event.code)) event.preventDefault();
       if (["KeyA", "ArrowLeft"].includes(event.code)) this.move(-1);
       if (["KeyD", "ArrowRight"].includes(event.code)) this.move(1);
@@ -136,6 +158,7 @@ class Town extends Phaser.Scene {
     return view;
   }
   begin() {
+    this.relayPanel.close();
     this.intro = true;
     gameAudio.setMenu(false);
     gameAudio.stop();
@@ -159,6 +182,10 @@ class Town extends Phaser.Scene {
     this.world.setPosition(camera.x, camera.y).setScale(camera.zoom);
     this.combatView.reset(this.map.id);
     this.combatView.update(this.movement, this.clock);
+    this.relay = this.isTelegraph ? new TelegraphMission() : undefined;
+    this.relaySpawned = 0; this.relayTime = "";
+    this.relayView.reset(this.isTelegraph);
+    if (this.relay) this.relayView.update(this.relay, this.movement.lane);
     el("equipped-name").textContent = `В руках: ${armory.equipped.name}`;
     this.lives = 3;
     this.score = 0;
@@ -177,12 +204,16 @@ class Town extends Phaser.Scene {
     el<HTMLButtonElement>("reload").disabled = true;
     this.hud();
     el("boss-notice").hidden = selected !== 4;
+    el("relay-status").hidden = !this.isTelegraph;
+    el("relay-interact").hidden = !this.isTelegraph;
+    el("stats").setAttribute("aria-live", this.isTelegraph ? "off" : "polite");
     if (selected === 4) this.renderBoss();
   }
   startFight() {
     if (!this.intro || this.ended) return;
     this.intro = false;
     this.nextSpawn = this.clock + 700;
+    if (this.relay) { this.relay.start(this.clock); this.nextSpawn = this.clock + 3500; this.updateRelay(); }
     this.encounter.nextAt = this.clock + bossTiming.first;
     el<HTMLButtonElement>("pause").disabled = false;
     el<HTMLButtonElement>("reload").disabled = false;
@@ -194,7 +225,8 @@ class Town extends Phaser.Scene {
     const progressText =
       selected === 0
         ? `Попадания ${this.kills}`
-        : `${this.kills}/${levels[selected].goal}`;
+        : this.relay ? `Связь ${this.relay.restored}/3 · ${formatRelayTime(this.relay.remaining(this.clock))}`
+          : `${this.kills}/${this.rules.goal}`;
     el("stats").textContent =
       `♥ ${this.lives} / 3   ·   Патроны ${this.ammo}/${this.capacity}   ·   ${progressText}   ·   ${this.score} очков`;
     el("ammo-rounds").replaceChildren(
@@ -232,11 +264,11 @@ class Town extends Phaser.Scene {
     if (phase === "exposed") this.bossAimLane = this.movement.position;
   }
   move(direction: number) {
-    if (this.ended || this.intro || this.paused) return;
+    if (this.ended || this.intro || this.paused || this.relayPanel.active) return;
     this.movement.move(direction, this.clock); this.updateCombatUI();
   }
   stance(crouching: boolean) {
-    if (this.ended || this.intro || this.paused) return;
+    if (this.ended || this.intro || this.paused || this.relayPanel.active) return;
     this.movement.stance(crouching, this.clock); this.updateCombatUI();
   }
   updateCombatUI() {
@@ -245,12 +277,48 @@ class Town extends Phaser.Scene {
     const text = `${p.lane + 1}/3 · ${cover.name}`;
     if (el("cover-status").textContent !== text) el("cover-status").textContent = text;
     el("play").dataset.cover = p.protected ? "safe" : "open";
-    const locked = this.ended || this.intro || this.paused;
+    const locked = this.ended || this.intro || this.paused || !!this.relayPanel?.active;
     el<HTMLButtonElement>("move-left").disabled = locked || p.lane === 0 || p.moving;
     el<HTMLButtonElement>("move-right").disabled = locked || p.lane === 2 || p.moving;
     el<HTMLButtonElement>("crouch").disabled = locked || p.crouching;
     el<HTMLButtonElement>("peek").disabled = locked || !p.crouching;
     el("crouch").setAttribute("aria-pressed", String(p.crouching));
+    if (this.relay) {
+      const restored = this.relay.done[p.lane];
+      el<HTMLButtonElement>("relay-interact").disabled = !this.canRepair;
+      el("relay-interact").textContent = restored ? "Связь есть" : "Щиток · E";
+      const status = restored ? "Реле включено · смени позицию"
+        : p.protected ? "Коммутатор рядом · E или кнопка" : "Для ремонта пригнись у коммутатора · S/↓";
+      if (el("relay-status").textContent !== status) el("relay-status").textContent = status;
+    }
+  }
+  get canRepair() {
+    return !!this.relay && this.relay.phase === "active" && !this.relay.done[this.movement.lane]
+      && !this.ended && !this.intro && !this.paused && !this.reloading && this.movement.protected;
+  }
+  openRelay() {
+    if (!this.canRepair || this.relayPanel.active) return;
+    this.relayPanel.open(this.relay!, this.movement.lane, this.clock);
+    this.updateCombatUI();
+  }
+  turnRelay(station: number, cell: number) {
+    if (!this.relayPanel.active || !this.canRepair || station !== this.movement.lane) return;
+    if (this.relay!.turn(station, cell, this.clock)) { gameAudio.play("hover"); this.relayPanel.render(); }
+  }
+  connectRelay(station: number) {
+    if (!this.relayPanel.active || !this.canRepair || station !== this.movement.lane) return;
+    if (!this.relay!.connect(station, this.clock)) return;
+    this.relayPanel.close(true); gameAudio.play("hover");
+    this.relayView.update(this.relay!, this.movement.lane); this.hud(); this.updateCombatUI();
+    if (this.relay!.phase === "won") this.finish(true);
+  }
+  updateRelay() {
+    if (!this.relay) return;
+    if (this.relay.tick(this.clock) === "timeout") { this.finish(false); return; }
+    this.relayView.update(this.relay, this.movement.lane);
+    this.relayPanel.updateClock(this.clock);
+    const time = formatRelayTime(this.relay.remaining(this.clock));
+    if (time !== this.relayTime) { this.relayTime = time; this.hud(); }
   }
   receiveFire(x: number, y: number, lane: number) {
     if (this.ended || this.intro) return;
@@ -266,7 +334,7 @@ class Town extends Phaser.Scene {
     } else if (outcome !== "hit") gameAudio.play("wood", (endX - 480) / 480);
   }
   reload() {
-    if (this.intro || this.ended || this.paused || this.reloading || this.ammo === this.capacity) return;
+    if (this.intro || this.ended || this.paused || this.relayPanel.active || this.reloading || this.ammo === this.capacity) return;
     this.reloading = true;
     this.reloadEnd = this.clock + getWeapon(this.weaponId).reloadMs;
     this.weapon.reload(this.capacity - this.ammo);
@@ -276,12 +344,13 @@ class Town extends Phaser.Scene {
   togglePause() {
     if (this.intro || this.ended) return;
     this.paused = !this.paused;
+    this.relayPanel.setPaused(this.paused);
     gameAudio.setPaused(this.paused);
     el("pause").textContent = this.paused ? "Продолжить" : "Пауза";
     this.updateCombatUI();
   }
   shoot(x: number, y: number) {
-    if (this.intro || this.ended || this.paused || this.reloading || this.ammo === 0 || !this.movement.canShoot) return;
+    if (this.intro || this.ended || this.paused || this.relayPanel.active || this.reloading || this.ammo === 0 || !this.movement.canShoot) return;
     this.ammo--;
     const screenPoint = this.world.getWorldTransformMatrix().transformPoint(x, y);
     this.weapon.aim(screenPoint.x, screenPoint.y);
@@ -339,7 +408,7 @@ class Town extends Phaser.Scene {
           this.score += economy.enemyBounty;
         }
         if (this.lives <= 0) finished = false;
-        else if (selected !== 0 && this.kills >= levels[selected].goal)
+        else if (selected !== 0 && !this.isTelegraph && this.kills >= this.rules.goal)
           finished = true;
       } else if (selected === 0) {
         this.lives--;
@@ -353,14 +422,17 @@ class Town extends Phaser.Scene {
   }
   finish(win: boolean) {
     if (this.intro || this.ended) return;
+    if (win && this.relay && this.relay.phase !== "won") return;
+    if (!win) this.relay?.stop(this.clock);
     this.ended = true;
+    this.relayPanel.close();
     this.updateCombatUI();
     gameAudio.stop("reload");
     let saved = true;
     const endlessRun = selected === 0;
     const bonus = win ? armory.rewardVictory(selected) : 0;
     this.earned += bonus;
-    if (win || endlessRun) {
+    if ((win || endlessRun) && !this.isTelegraph) {
       progress = recordWin(progress, selected, this.score);
       try {
         storage.setItem("lastshot-progress", JSON.stringify(progress));
@@ -368,20 +440,27 @@ class Town extends Phaser.Scene {
         saved = false;
       }
     }
-    el("result-title").textContent = endlessRun
+    if (win && this.relay) {
+      telegraphRecord = recordTelegraphWin(telegraphRecord, this.relay.elapsed);
+      try { storage.setItem(telegraphKey, JSON.stringify(telegraphRecord)); } catch { saved = false; }
+    }
+    el("result-title").textContent = this.relay ? win ? "Телеграф ожил!" : "Линия осталась без связи" : endlessRun
       ? "Конец игры"
       : win
         ? selected === 4
           ? "Город свободен!"
           : "Отличный выстрел, шериф Картер!"
         : "Город ждёт твоего возвращения";
-    el("result-text").textContent = endlessRun
+    el("result-text").textContent = this.relay
+      ? win ? `Все три коммутатора включены за ${formatRelayTime(this.relay.elapsed)}. Помощь уже в пути. ${saved ? "Рекорд сохранён." : "Сохранение недоступно: рекорд действует до закрытия страницы."}`
+        : `${this.relay.restored}/3 коммутатора. ${this.clock >= this.relay.deadline ? "Время вышло." : this.lives <= 0 ? "Шериф ранен." : "Попытка завершена."} Собери линию от входа к выходу; можно пройти без единого выстрела.`
+      : endlessRun
       ? `${this.score} очков · ${this.kills} бандитов. Три ошибки — и смена окончена. ${saved ? "Рекорд сохранён." : "Сохранение недоступно: рекорд действует до закрытия страницы."}`
       : `${this.score} очков · ${this.kills} попаданий. ${win ? (saved ? "Прогресс сохранён." : "Сохранение недоступно: прогресс действует до закрытия страницы.") : "Попробуй снова: следи за патронами и береги жителей."}${win && selected === 4 ? " Сьюзи спасена — вы снова вместе." : ""}`;
     el("result-reward").textContent = `В арсенал за бой: +${this.earned.toLocaleString("ru-RU")} очков${bonus ? ` · премия за победу: ${bonus.toLocaleString("ru-RU")}` : ""}. На счету: ${armory.balance.toLocaleString("ru-RU")} очков.${armory.persisted ? "" : " Сохранение недоступно: очки действуют до закрытия страницы."}`;
     el("retry").textContent = endlessRun ? "Начать заново" : "Ещё раз";
     el("choose").textContent = endlessRun ? "Главное меню" : "Выбор уровня";
-    el("next").hidden = endlessRun || !win || selected === 4;
+    el("next").hidden = endlessRun || !win || selected === 4 || this.isTelegraph;
     el("result").hidden = false;
   }
   update(_time: number, delta: number) {
@@ -398,6 +477,8 @@ class Town extends Phaser.Scene {
     this.weapon.update(delta, this.reloading);
     this.combatView.update(this.movement, time);
     this.updateCombatUI();
+    this.updateRelay();
+    if (this.ended) return;
     if (this.reloading && time >= this.reloadEnd) {
       this.reloading = false;
       gameAudio.stop("reload");
@@ -442,14 +523,14 @@ class Town extends Phaser.Scene {
         this.targets = this.targets.filter((v) => v !== t);
       }
     }
-    if (time >= this.nextSpawn) {
+    if (time >= this.nextSpawn && (!this.relay || this.relaySpawned < telegraphMode.maxBandits)) {
       const free = this.slots
         .map((_, i) => i)
         .filter((i) => !this.targets.some((t) => t.slot === i));
       if (free.length) {
         const slot = Phaser.Utils.Array.GetRandom(free),
           s = this.slots[slot],
-          civilian = Math.random() < levels[selected].civilians;
+          civilian = Math.random() < this.rules.civilians;
         const view = this.person(s.x, s.y, civilian);
         if (this.map.emerge) view.setY(s.bodyY + 24 * s.scale).setAlpha(0.4);
         this.targets.push({
@@ -457,13 +538,14 @@ class Town extends Phaser.Scene {
           slot,
           civilian,
           view,
-          expires: time + levels[selected].lifetime,
+          expires: time + this.rules.lifetime,
           appearedAt: this.map.emerge ? time : undefined,
-          attack: !civilian && Math.random() < 0.55 && !this.targets.some(t => t.attack && !t.attack.fired)
+          attack: !civilian && (this.isTelegraph || Math.random() < 0.55) && !this.targets.some(t => t.attack && !t.attack.fired)
             ? planAttack(time) : undefined,
         });
+        if (this.relay) this.relaySpawned++;
       }
-      this.nextSpawn = time + levels[selected].interval;
+      this.nextSpawn = time + this.rules.interval;
     }
   }
 }
@@ -516,11 +598,12 @@ function updateMapPicker() {
     button.setAttribute("aria-pressed", String(button.dataset.map === selectedMap.id));
   }
   document.body.dataset.map = selectedMap.id;
-  el("map-description").textContent = `${selectedMap.description} ${mapSaved ? "Карта доступна во всех пяти режимах." : "Выбор действует до закрытия страницы."}`;
+  el("map-description").textContent = `${selectedMap.description} ${mapSaved ? "Карта доступна во всех режимах, включая «Линию жизни»." : "Выбор действует до закрытия страницы."}`;
 }
 
 function menu() {
   introDialogue.close();
+  scene.relayPanel?.close();
   gameAudio.stop();
   gameAudio.setMenu(!openingStory.active);
   gameAudio.setPaused(false);
@@ -531,11 +614,13 @@ function menu() {
   el("menu").hidden = false;
   el("arsenal").hidden = true;
   el<HTMLButtonElement>("arsenal-open").disabled = !townReady;
-  document.body.classList.remove("in-arsenal", "in-play", "boss-mode");
+  document.body.classList.remove("in-arsenal", "in-play", "boss-mode", "telegraph-mode");
   document.body.classList.toggle("in-menu", !openingStory.active);
   window.scrollTo(0, 0);
   document.querySelector(".saloon-transition")?.remove();
   updateMapPicker();
+  el<HTMLButtonElement>("telegraph-start").disabled = !townReady;
+  el("telegraph-best").textContent = `ПРЕМИЯ +${economy.victoryBonuses[5].toLocaleString("ru-RU")} ОЧКОВ${telegraphRecord.bestMs ? ` · РЕКОРД ${formatRelayTime(telegraphRecord.bestMs)}` : ""}`;
   el("levels").replaceChildren();
   levels.forEach((l, i) => {
     const b = document.createElement("button");
@@ -567,10 +652,12 @@ function menu() {
   });
 }
 function start(i: number) {
-  if (!townReady || openingStory.active) return;
+  if (!townReady || openingStory.active || !Number.isInteger(i) || i < 0 || i >= modes.length
+    || (i < levels.length && i >= progress.unlocked)) return;
   document.body.classList.remove("in-menu", "in-arsenal");
   document.body.classList.add("in-play");
   document.body.classList.toggle("boss-mode", i === 4);
+  document.body.classList.toggle("telegraph-mode", i === 5);
   el("arsenal").hidden = true;
   // The doors reveal the selected map while the conversation holds gameplay.
   document.querySelector(".saloon-transition")?.remove();
@@ -587,19 +674,20 @@ function start(i: number) {
   el("menu").hidden = true;
   el("result").hidden = true;
   el("play").hidden = false;
-  el("level-name").textContent = `${i + 1}. ${levels[i].name} · ${selectedMap.name}`;
+  el("level-name").textContent = `${i === 5 ? "ϟ" : `${i + 1}.`} ${modes[i].name} · ${selectedMap.name}`;
   scene.begin();
   gameLayout.fit();
   window.scrollTo(0, 0);
   gameAudio.play("door");
   introDialogue.open(
-    `${selectedMap.name} · ${levels[i].name}`,
+    `${selectedMap.name} · ${modes[i].name}`,
     getIntroDialogue(i, selectedMap.id),
     () => scene.startFight(),
     () => {
       menu();
-      el("levels").querySelectorAll<HTMLButtonElement>(".level")[i]?.focus({ preventScroll: true });
+      (i === 5 ? el("telegraph-start") : el("levels").querySelectorAll<HTMLButtonElement>(".level")[i])?.focus({ preventScroll: true });
     },
+    i === 5 ? "Начать поручение" : "Начать перестрелку",
   );
 }
 el("arsenal-open").onclick = () => {
@@ -633,6 +721,11 @@ document.addEventListener("keydown", (event) => {
   }
 });
 el("reload").onclick = () => scene.reload();
+el("telegraph-start").onclick = () => start(5);
+el("telegraph-start").addEventListener("pointerenter", event => {
+  if (event.pointerType !== "touch" && !el<HTMLButtonElement>("telegraph-start").disabled) gameAudio.play("hover");
+});
+el("relay-interact").onclick = () => scene.openRelay();
 el("pause").onclick = () => scene.togglePause();
 el("move-left").onclick = () => scene.move(-1);
 el("move-right").onclick = () => scene.move(1);

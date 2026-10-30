@@ -72,8 +72,8 @@ test("bad balances, broken ownership and overflow are sanitized without unlockin
 
 test("each replay can earn its mode's clear bonus; endless and invalid modes have no clear bonus", () => {
   const state = emptyArsenal();
-  for (const level of [0, -1, 5, 1.5, "1"]) assert.equal(awardVictory(state, level), state);
-  for (let level = 1; level < levels.length; level++) {
+  for (const level of [0, -1, 6, 1.5, "1"]) assert.equal(awardVictory(state, level), state);
+  for (let level = 1; level < economy.victoryBonuses.length; level++) {
     const rewarded = awardVictory(state, level);
     assert.equal(rewarded.balance, economy.victoryBonuses[level]);
     assert.equal(awardVictory(rewarded, level).balance, 2 * economy.victoryBonuses[level]);

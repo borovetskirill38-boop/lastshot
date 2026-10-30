@@ -1231,3 +1231,77 @@ body.in-prologue { overflow: hidden; background: #110e0b; }
 .movement-controls small { color: #b7a088; margin-left: 5px; }
 #crouch[aria-pressed="true"] { border-color: #a9c28d; background: #33422c; }
 @media (max-width: 420px), (max-height: 500px) { .movement-controls small { display: none; } .movement-controls button { font-size: 11px; } #cover-status { font-size: 10px; } }
+
+/* A separate puzzle operation, preserving the five campaign doors. */
+.telegraph-entry {
+  display: flex; align-items: center; gap: 24px; width: min(100%, 780px);
+  margin: 24px auto 12px; padding: 22px 26px; text-align: left;
+  border-color: #b28b52; background: linear-gradient(125deg, #47645635, transparent 65%), #241c16ed;
+  box-shadow: inset 0 0 0 4px #bc975319, 0 8px 25px #0005;
+}
+.telegraph-emblem { flex: none; color: #e9c889; font: 64px/1 Georgia, serif; text-shadow: 0 3px 8px #000; }
+.telegraph-entry > span:last-child { display: grid; gap: 8px; min-width: 0; }
+.telegraph-entry b { color: #f1d7a3; font: bold clamp(25px, 4vw, 34px)/1.2 Georgia, serif; }
+.telegraph-entry small { color: #c6aa7c; font: 10px/1.5 monospace; letter-spacing: 1px; overflow-wrap: anywhere; }
+#telegraph-description { color: #d0c0a5; font: 14px/1.6 Georgia, serif; }
+body.telegraph-mode .loadout-readout { display: grid; gap: 3px; line-height: 1.4; }
+#relay-status { color: #b8d1b3; }
+body.telegraph-mode .controls { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#relay-interact { color: #d6e4bf; border-color: #7e9f76; background: #304634; }
+#relay-dialog {
+  width: min(780px, calc(100vw - 24px)); max-height: calc(100dvh - 24px);
+  box-sizing: border-box; padding: 0; overflow: auto; overscroll-behavior: contain;
+  border: 2px solid #b58b4c; border-radius: 6px; color: #e3cc9f;
+  background: radial-gradient(ellipse at top, #51412a, #241d18 70%);
+  box-shadow: 0 25px 90px #000b, inset 0 0 0 5px #a77e3b22;
+}
+#relay-dialog::backdrop { background: #100d0bc4; }
+.relay-shell { padding: clamp(12px, 3vw, 24px); }
+.relay-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; font: 10px/1.5 monospace; letter-spacing: 1px; }
+#relay-clock { flex: none; padding: 4px 9px; border: 1px solid #a68851; border-radius: 3px; background: #1c1712; color: #eed097; font: bold 22px/1.2 monospace; }
+#relay-clock.is-urgent { color: #ffb89b; border-color: #bc775b; }
+#relay-title { margin: 10px 0; font: bold clamp(22px, 4vw, 30px)/1.2 Georgia, serif; }
+#relay-help { color: #ceba97; font: 13px/1.6 Georgia, serif; margin: 8px 0 16px; }
+.relay-main { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(160px, 1fr); gap: 16px; align-items: center; }
+.relay-board-wrap { min-width: 0; padding: 12px 16px; }
+#relay-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; width: min(100%, 344px); margin: auto; }
+.relay-contact { position: relative; min-width: 0; min-height: 0; padding: 0; aspect-ratio: 1; border: 1px solid #8a6d48; border-radius: 4px; background: linear-gradient(135deg, #493b2e, #201b17); box-shadow: inset 0 2px 4px #e4c28c15, inset 0 -2px 8px #0008; touch-action: manipulation; }
+.relay-contact svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.relay-contact:focus-visible { outline: 2px solid #f4d99c; outline-offset: 1px; }
+.contact-screw { fill: #65503b; stroke: #967b54; stroke-width: 3; }
+.contact-track { fill: none; stroke: #b78a50; stroke-width: 15; stroke-linecap: round; }
+.contact-tip { fill: #e2bf7d; stroke: #684728; stroke-width: 2; }
+.relay-contact.is-powered { background: linear-gradient(140deg, #3c5443, #1c3026); border-color: #91bc8c; }
+.is-powered .contact-track { stroke: #c0d8a5; filter: drop-shadow(0 0 3px #a5c58c66); }
+.is-powered .contact-tip { fill: #e4f2d7; }
+.relay-input::before, .relay-output::after { position: absolute; top: 50%; transform: translateY(-50%); color: #d7e8a9; font: bold 18px monospace; }
+.relay-input::before { content: '→'; left: -17px; }
+.relay-output::after { content: '→'; right: -17px; color: #f4c982; }
+.relay-side { min-width: 0; }
+#relay-connection { min-height: 3.2em; color: #d8dfbb; font: 15px/1.6 Georgia, serif; }
+.relay-keyboard { color: #bba580; font: 12px/1.7 Georgia, serif; }
+#relay-connect { width: 100%; color: #e1edca; border-color: #8ca36f; background: #405235; }
+.relay-bottomline { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.relay-bottomline button { flex: 1; min-width: 0; min-height: 44px; padding: 10px 8px; font-size: 12px; overflow-wrap: anywhere; }
+#relay-abort { background: #4b3027; border-color: #876044; }
+@media (max-width: 600px) {
+  .telegraph-entry { gap: 15px; padding: 18px; }
+  .telegraph-emblem { font-size: 43px; }
+  .relay-main { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  #relay-connection { min-height: 0; margin: 8px 0; }
+  .relay-keyboard { display: none; }
+  #relay-board { max-width: 200px; }
+  #relay-help { font-size: 12px; }
+  .relay-topline { font-size: 8px; letter-spacing: .3px; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .relay-shell { padding: 10px 14px; }
+  #relay-title { margin: 4px 0; font-size: 21px; }
+  #relay-help { margin: 4px 0; font-size: 11px; line-height: 1.4; }
+  .relay-main { grid-template-columns: minmax(208px, 1fr) minmax(0, 1fr); gap: 12px; }
+  #relay-board { max-width: min(100%, calc(100dvh - 195px)); min-width: 188px; }
+  .relay-board-wrap { padding-block: 5px; }
+  .relay-keyboard { font-size: 10px; line-height: 1.5; }
+  #relay-connection { margin: 4px 0; min-height: 0; font-size: 13px; }
+  .relay-bottomline { margin-top: 6px; }
+}

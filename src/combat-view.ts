@@ -104,6 +104,13 @@ export class CombatView {
     }
     return undefined;
   }
+  /** Front-mounted equipment follows the furniture, never the screen or floor. */
+  equipmentMount(index: number) {
+    const cover = this.covers[index];
+    const image = cover.image;
+    return { x: image.x + (cover.frame === "barrels" ? -.22 : 0) * image.displayWidth,
+      y: image.y - image.displayHeight * (cover.frame === "wagon" ? .68 : .48), width: image.displayWidth * .28 };
+  }
   private coverPoint(hit: CoverHit) {
     const image = this.covers[hit.index].image;
     return { x: image.x + (hit.u - .5) * image.displayWidth, y: image.y + (hit.v - 1) * image.displayHeight };

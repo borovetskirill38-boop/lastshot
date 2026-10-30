@@ -6,6 +6,7 @@ import arsenalModels from "./visuals/arsenal-models.webp?inline";
 import longGunModels from "./visuals/long-gun-models.webp?inline";
 import enemyCombat from "./visuals/enemy-combat.webp?inline";
 import playerCoverArt from "./visuals/player-covers.webp?inline";
+import telegraphArt from "./visuals/telegraph-box.webp?inline";
 import streetTexture from "./visuals/street-dusk.webp?inline";
 import tavernTexture from "./visuals/tavern.webp?inline";
 import bossTexture from "./visuals/boss-encounter.webp?inline";
@@ -40,6 +41,7 @@ export function preloadArt(scene: Phaser.Scene) {
   scene.load.image("long-gun-models", longGunModels);
   scene.load.image("enemy-combat", enemyCombat);
   scene.load.image("player-covers", playerCoverArt);
+  scene.load.image("telegraph-box", telegraphArt);
 }
 
 /** Uniform projection keeps the architecture and its room furniture undistorted. */

@@ -8,6 +8,7 @@ export class IntroDialogue {
   private lines: Line[] = [];
   private index = 0;
   private rightSpeaker = "bandit";
+  private actionLabel = "Начать перестрелку";
   private complete?: () => void;
   private cancelled?: () => void;
 
@@ -28,7 +29,7 @@ export class IntroDialogue {
     });
   }
 
-  open(context: string, lines: Line[], complete: () => void, cancelled: () => void) {
+  open(context: string, lines: Line[], complete: () => void, cancelled: () => void, actionLabel = "Начать перестрелку") {
     this.close();
     if (!lines.length) {
       complete();
@@ -38,6 +39,8 @@ export class IntroDialogue {
     this.index = 0;
     this.complete = complete;
     this.cancelled = cancelled;
+    this.actionLabel = actionLabel;
+    element("dialogue-title").textContent = actionLabel === "Начать поручение" ? "Перед поручением" : "Перед перестрелкой";
     const boss = lines.some((line) => line.speaker === "boss");
     this.dialog.dataset.opponent = boss ? "boss" : "bandit";
     this.rightSpeaker = boss ? "boss" : "bandit";
@@ -71,7 +74,7 @@ export class IntroDialogue {
     element("dialogue-speaker").textContent = line.name;
     element("dialogue-line").textContent = line.text;
     element("dialogue-progress").textContent = `${this.index + 1} / ${this.lines.length}`;
-    this.next.textContent = this.index === this.lines.length - 1 ? "Начать перестрелку" : "Дальше →";
+    this.next.textContent = this.index === this.lines.length - 1 ? this.actionLabel : "Дальше →";
   }
 
   private advance() {

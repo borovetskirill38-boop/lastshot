@@ -35,6 +35,12 @@ const bossOpenings = {
 
 /** A fresh conversation for every run; reading it never touches saved progress. */
 export function getIntroDialogue(level, mapId) {
+  if (level === 5) return [
+    { speaker: "hero", name: "Шериф Картер", text: "Телеграф молчит. Восстановлю три коммутатора — и вызову помощь в Dusty Town." },
+    { speaker: "bandit", name: "Бандит", text: "У тебя две минуты, Картер. Посмотрим, успеешь ли ты разобраться с контактами!" },
+    { speaker: "hero", name: "Шериф Картер", text: "У каждого укрытия — свой щиток. Пригнусь, открою его и соединю вход с выходом." },
+    { speaker: "bandit", name: "Бандит", text: "Тогда попробуй. Наши стрелки уже заняли позиции." },
+  ];
   const index = Number.isInteger(level) && level >= 0 && level < challenges.length ? level : 0;
   const location = Object.hasOwn(openings, mapId) ? mapId : "saloon";
   const enemy = index === 4 ? { speaker: "boss", name: "Билли Пуля" } : { speaker: "bandit", name: "Бандит" };

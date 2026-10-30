@@ -3,7 +3,7 @@
 /** @typedef {"enemy" | "civilian" | "miss"} ShotOutcome */
 
 export const arsenalKey = "lastshot-arsenal";
-export const economy = { enemyBounty: 100, victoryBonuses: [0, 300, 450, 600, 900], maxBalance: 999999999 };
+export const economy = { enemyBounty: 100, victoryBonuses: [0, 300, 450, 600, 900, 1200], maxBalance: 999999999 };
 export const weapons = [
   {
     id: "last-word",

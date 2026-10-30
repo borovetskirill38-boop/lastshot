@@ -1,5 +1,20 @@
 # Western environment and character artwork
 
+## Telegraph operation
+
+- `telegraph-box.webp`: original transparent512×475 telegraph commutator prop,
+  quality94 WebP. Weathered walnut, aged brass, ceramic contacts and cloth-covered
+  cable; no baked text. It is mounted on the opaque front of each player cover
+  using `CombatView.equipmentMount`, so it shares the furniture's projection and
+  never changes the floor. Three reused images, tiny live indicator lamps and
+  Roman-numeral labels distinguish restored stations. The source generated PNG
+  remains outside the repository.
+- The repair panel uses accessible HTML buttons and SVG copper tracks. Their
+  masks come from the game model, with a highlight for the portion conducting
+  from the entry. No solution is embedded in the panel or source artwork.
+  All sixteen buttons are created once, all world equipment is destroyed on
+  reset, and the single prop texture stays cached. No network is used at play.
+
 ## Cover combat
 
 - `enemy-combat.webp`: original transparent1448×1086 atlas, four rows (mustache,
