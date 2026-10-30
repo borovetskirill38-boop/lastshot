@@ -1,6 +1,6 @@
 import { test, expect, Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { skipPrologue, skipIntro } from "./helpers";
+import { skipPrologue, skipIntro, offlineArsenal } from "./helpers";
 
 const modes = ["Первый выстрел", "Мирные жители", "Быстрая рука", "Шесть патронов", "Шериф Картер против Билли Пули"];
 const locations = [
@@ -171,6 +171,7 @@ test("next level and retry each open a fresh dialogue for the selected map and m
 test("offline touch dialogue fits narrow screens and rotation, then preserves the equipped weapon", async ({ browser }) => {
   const context = await browser.newContext({ offline: true, viewport: { width: 280, height: 653 }, isMobile: true, hasTouch: true });
   const page = await context.newPage();
+  await offlineArsenal(page);
   const errors: string[] = [], requests: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("request", (request) => requests.push(request.url()));

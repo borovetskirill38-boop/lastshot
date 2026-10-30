@@ -1,5 +1,20 @@
 import { expect, Page } from "@playwright/test";
 import { coverWorldView } from "../src/cover-geometry.js";
+import { emptyArsenal, weapons } from "../src/arsenal.js";
+
+/** Model/layout scenarios start with purchased gear; shop tests earn/buy it. */
+export const ownedArsenal = () => ({ ...emptyArsenal(), owned: weapons.map(w => w.id) });
+
+/** Standalone file pages have no origin storage; supply an existing local save. */
+export async function offlineArsenal(page: Page, state = ownedArsenal()) {
+  await page.evaluate(arsenal => {
+    const values = new Map([["lastshot-arsenal", JSON.stringify(arsenal)]]);
+    Object.defineProperty(window, "localStorage", { configurable: true, value: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => { values.set(key, String(value)); },
+    } });
+  }, state);
+}
 
 /** Native input must target the rendered world after camera travel/tilt. */
 export async function worldPoint(page: Page, x: number, y: number) {

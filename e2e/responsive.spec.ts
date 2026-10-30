@@ -1,4 +1,4 @@
-import { skipPrologue, skipIntro, worldPoint } from "./helpers";
+import { skipPrologue, skipIntro, worldPoint, ownedArsenal } from "./helpers";
 import { test, expect, Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -37,12 +37,12 @@ for (const [width, height] of sizes) {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await page.setViewportSize({ width, height });
-    await page.addInitScript(() => {
+    await page.addInitScript(state => {
       localStorage.setItem("lastshot-progress", JSON.stringify({ unlocked: 5, best: [] }));
-      localStorage.setItem("lastshot-arsenal", JSON.stringify({ version: 1, selected: "last-word", stats: {
+      localStorage.setItem("lastshot-arsenal", JSON.stringify({ ...state, balance: 999999999, stats: {
         "long-watch": { hits: 1234567890123456, misses: 1234567890123456, civilianHits: 1234567890123 },
       } }));
-    });
+    }, ownedArsenal());
     await page.goto("/");
     await skipPrologue(page);
     await expect(page.locator(".level").first()).toBeEnabled();

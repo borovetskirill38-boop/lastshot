@@ -1,4 +1,4 @@
-import { skipPrologue, skipIntro } from "./helpers";
+import { skipPrologue, skipIntro, ownedArsenal } from "./helpers";
 import { test, expect } from "@playwright/test";
 
 const pocket = "Пыльный спутник", long = "Дальний дозор", classic = "Последний довод";
@@ -16,7 +16,10 @@ async function back(page: any) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("lastshot-progress", JSON.stringify({ unlocked: 5, best: [] })));
+  await page.addInitScript(state => {
+    localStorage.setItem("lastshot-progress", JSON.stringify({ unlocked: 5, best: [] }));
+    if (!localStorage.getItem("lastshot-arsenal")) localStorage.setItem("lastshot-arsenal", JSON.stringify(state));
+  }, ownedArsenal());
 });
 
 test("weapon choice changes capacity and viewmodel, reloads to that capacity and survives refresh", async ({ page }) => {

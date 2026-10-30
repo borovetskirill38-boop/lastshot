@@ -1,4 +1,4 @@
-import { getWeapon, weapons, readArsenal, selectWeapon, recordShot, saveArsenal } from "./arsenal.js";
+import { getWeapon, weapons, readArsenal, selectWeapon, recordShot, saveArsenal, nextWeapon, purchaseWeapon, awardVictory, economy } from "./arsenal.js";
 import weaponIcons from "./visuals/weapon-icons.webp?inline";
 import longGunIcons from "./visuals/long-gun-icons.webp?inline";
 
@@ -51,6 +51,8 @@ export class Armory {
       card.dataset.weaponId = weapon.id;
       card.setAttribute("aria-label", weapon.name);
       card.innerHTML = `<i class="weapon-icon" aria-hidden="true"></i><span>${weapon.name}</span><small></small>`;
+      card.querySelector("small")!.id = `weapon-status-${weapon.id}`;
+      card.setAttribute("aria-describedby", `weapon-status-${weapon.id}`);
       card.querySelector(".weapon-icon")!.append(weaponIcon(weapon.icon));
       card.onclick = () => {
         this.inspected = weapon.id;
@@ -61,16 +63,33 @@ export class Armory {
       el("weapon-list").append(card);
     }
     el("equip-weapon").onclick = () => {
+      if (!this.state.owned.includes(this.inspected)) return;
       this.state = selectWeapon(this.state, this.inspected);
       this.saved = saveArsenal(this.storage, this.state);
       this.render();
       el("arsenal-feedback").textContent = `Выбрано: ${this.equipped.name}`;
+    };
+    el("buy-weapon").onclick = () => {
+      const purchased = purchaseWeapon(this.state, this.inspected);
+      if (purchased === this.state) return;
+      this.state = purchased;
+      this.saved = saveArsenal(this.storage, this.state);
+      this.render();
+      el("arsenal-feedback").textContent = `Куплено и выбрано: ${this.equipped.name}`;
     };
     this.render();
   }
 
   get equipped() {
     return getWeapon(this.state.selected);
+  }
+
+  get balance() { return this.state.balance; }
+  get persisted() { return this.saved; }
+
+  private renderFunds() {
+    el("arsenal-balance").textContent = this.balance.toLocaleString("ru-RU");
+    el("menu-wallet").textContent = this.balance.toLocaleString("ru-RU");
   }
 
   open() {
@@ -80,19 +99,36 @@ export class Armory {
   }
 
   record(weaponId: string, outcome: "enemy" | "civilian" | "miss") {
+    const before = this.balance;
     this.state = recordShot(this.state, weaponId, outcome);
     this.saved = saveArsenal(this.storage, this.state);
+    this.renderFunds();
+    return this.balance - before;
+  }
+
+  rewardVictory(level: number) {
+    const before = this.balance;
+    this.state = awardVictory(this.state, level);
+    this.saved = saveArsenal(this.storage, this.state);
+    this.renderFunds();
+    return this.balance - before;
   }
 
   private render() {
     const weapon = getWeapon(this.inspected);
     const stats = this.state.stats[weapon.id];
+    const next = nextWeapon(this.state);
+    const owned = this.state.owned.includes(weapon.id);
+    this.renderFunds();
     for (const item of weapons) {
       const card = this.cards.get(item.id)!;
       card.classList.toggle("is-inspected", item.id === weapon.id);
       card.setAttribute("aria-pressed", String(item.id === weapon.id));
+      card.classList.toggle("is-locked", !this.state.owned.includes(item.id));
       card.querySelector("small")!.textContent = item.id === this.state.selected
-        ? "В РУКАХ" : `${item.capacity} ${roundNames[roundPlural.select(item.capacity) as keyof typeof roundNames]}`;
+        ? "В РУКАХ" : this.state.owned.includes(item.id)
+          ? `КУПЛЕНО · ${item.capacity} ${roundNames[roundPlural.select(item.capacity) as keyof typeof roundNames]}`
+          : `${item.id === next?.id ? "СЛЕДУЮЩАЯ ПОКУПКА" : "ЗАКРЫТО"} · ${item.price.toLocaleString("ru-RU")} ОЧКОВ`;
     }
     el("weapon-name").textContent = weapon.name;
     el("weapon-kind").textContent = weapon.kind;
@@ -109,10 +145,22 @@ export class Armory {
     el("weapon-capacity").textContent = String(weapon.capacity);
     el("loadout-label").textContent = this.equipped.name;
     const equip = el<HTMLButtonElement>("equip-weapon");
+    equip.hidden = !owned;
     equip.disabled = weapon.id === this.state.selected;
     equip.textContent = equip.disabled ? "Оружие выбрано" : "Взять оружие";
+    const buy = el<HTMLButtonElement>("buy-weapon");
+    buy.hidden = owned;
+    buy.disabled = weapon.id !== next?.id || this.balance < weapon.price;
+    buy.textContent = `Купить и взять · ${weapon.price.toLocaleString("ru-RU")} очков`;
+    el("weapon-purchase-note").textContent = owned
+      ? weapon.price === 0 ? "Стартовое оружие шерифа · бесплатно" : "Куплено навсегда. Можно брать в любой бой."
+      : weapon.id !== next?.id
+        ? `Сначала купите «${weapons[weapons.indexOf(weapon) - 1].name}».`
+        : this.balance < weapon.price
+          ? `Нужно ещё ${(weapon.price - this.balance).toLocaleString("ru-RU")} очков.`
+          : "Очков достаточно. Покупка сразу выдаст оружие.";
     el("arsenal-save-note").textContent = this.saved
-      ? "Статистика за всё время на этом устройстве. Попадания по мирным входят в общее число."
-      : "Сохранение недоступно: выбор и статистика действуют до закрытия страницы.";
+      ? `Покупки, очки и статистика сохраняются на этом устройстве. Попадания по мирным входят в общее число, но не приносят ${economy.enemyBounty} очков.`
+      : "Сохранение недоступно: покупки, очки, выбор и статистика действуют до закрытия страницы.";
   }
 }

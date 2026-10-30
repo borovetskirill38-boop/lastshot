@@ -42,6 +42,7 @@
             <button id="arsenal-open" class="arsenal-entry" disabled>
               <span>Арсенал</span><small id="loadout-label"></small>
             </button>
+            <p class="menu-wallet">На покупки: <strong id="menu-wallet">0</strong> очков</p>
           </div>
           <div class="map-picker" role="group" aria-labelledby="map-title" aria-describedby="map-description">
             <h2 id="map-title">Место перестрелки</h2>
@@ -64,6 +65,8 @@
             <p class="eyebrow">СТАЛЬ · ДЕРЕВО · ПОРОХ</p>
             <h1 id="arsenal-title" tabindex="-1">Арсенал</h1>
             <p>Выбери спутника для следующей истории.</p>
+            <p class="armory-wallet">На счету <strong id="arsenal-balance">0</strong> <span>очков</span></p>
+            <p class="economy-note">100 очков за бандита. За победу — премия от 300 до 900 очков.<br />Покупай оружие по порядку. Заработанное остаётся даже при поражении или выходе из боя.</p>
           </div>
           <div class="armory-layout">
             <div class="weapon-rack">
@@ -89,8 +92,10 @@
               </dl>
               <div class="equip-row">
                 <button id="equip-weapon">Оружие выбрано</button>
+                <button id="buy-weapon" hidden aria-describedby="weapon-purchase-note"></button>
                 <p id="arsenal-feedback" role="status"></p>
               </div>
+              <p id="weapon-purchase-note"></p>
               <p id="arsenal-save-note"></p>
               <p class="arsenal-ammo-note">Резерв патронов не ограничен. Вместимость определяет число выстрелов до перезарядки.</p>
             </article>
@@ -139,6 +144,7 @@
           >
             <h2 id="result-title"></h2>
             <p id="result-text"></p>
+            <p id="result-reward"></p>
             <div class="result-actions">
               <button id="retry">Ещё раз</button
               ><button id="next">Следующий уровень →</button

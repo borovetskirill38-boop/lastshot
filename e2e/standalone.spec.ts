@@ -1,4 +1,4 @@
-import { skipPrologue, skipIntro } from "./helpers";
+import { skipPrologue, skipIntro, offlineArsenal } from "./helpers";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -55,6 +55,7 @@ test("single HTML runs offline with weapon and no external dependencies", async 
 test("offline mobile workshop equips a weapon, uses its capacity and keeps shot totals without external requests", async ({ browser }) => {
   const context = await browser.newContext({ offline: true, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await context.newPage();
+  await offlineArsenal(page);
   const requests: string[] = [], errors: string[] = [];
   page.on("request", (r) => requests.push(r.url()));
   page.on("pageerror", (e) => errors.push(e.message));

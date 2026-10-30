@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { skipPrologue, skipIntro } from "./helpers";
+import { skipPrologue, skipIntro, ownedArsenal, offlineArsenal } from "./helpers";
 
 const additions = [
   { id: "dust-trail", name: "Пыльный тракт", capacity: 10, frame: "trail", reloadMs: 2100, map: "saloon" },
@@ -13,10 +13,11 @@ for (const spec of additions) {
   test(`${spec.name}: model, live ammunition, pause-safe reload and independent persistent statistics`, async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
-    await page.addInitScript(map => {
+    await page.addInitScript(({ map, state }) => {
       localStorage.setItem("lastshot-progress", JSON.stringify({ unlocked: 5, best: [] }));
       localStorage.setItem("lastshot-map", map);
-    }, spec.map);
+      if (!localStorage.getItem("lastshot-arsenal")) localStorage.setItem("lastshot-arsenal", JSON.stringify(state));
+    }, { map: spec.map, state: ownedArsenal() });
     await page.goto("/");
     await skipPrologue(page);
     await page.getByRole("button", { name: /^Арсенал/ }).click();
@@ -110,6 +111,7 @@ test("all seven inventory icons and long gun models work in the offline mobile H
   test.setTimeout(60000);
   const context = await browser.newContext({ offline: true, viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
   const page = await context.newPage();
+  await offlineArsenal(page);
   const errors: string[] = [], requests: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   page.on("request", request => requests.push(request.url()));

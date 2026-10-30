@@ -1,11 +1,13 @@
 /** @typedef {{hits: number, misses: number, civilianHits: number}} WeaponStats */
-/** @typedef {{version: 1, selected: string, stats: Record<string, WeaponStats>}} ArsenalState */
+/** @typedef {{version: 2, selected: string, balance: number, owned: string[], stats: Record<string, WeaponStats>}} ArsenalState */
 /** @typedef {"enemy" | "civilian" | "miss"} ShotOutcome */
 
 export const arsenalKey = "lastshot-arsenal";
+export const economy = { enemyBounty: 100, victoryBonuses: [0, 300, 450, 600, 900], maxBalance: 999999999 };
 export const weapons = [
   {
     id: "last-word",
+    price: 0,
     name: "Последний довод",
     kind: "Классический револьвер",
     capacity: 6,
@@ -19,6 +21,7 @@ export const weapons = [
   },
   {
     id: "dust-companion",
+    price: 1500,
     name: "Пыльный спутник",
     kind: "Карманный револьвер",
     capacity: 5,
@@ -32,6 +35,7 @@ export const weapons = [
   },
   {
     id: "long-watch",
+    price: 3000,
     name: "Дальний дозор",
     kind: "Длинноствольный револьвер",
     capacity: 8,
@@ -45,6 +49,7 @@ export const weapons = [
   },
   {
     id: "dust-trail",
+    price: 4500,
     name: "Пыльный тракт",
     kind: "Рычажная винтовка",
     capacity: 10,
@@ -58,6 +63,7 @@ export const weapons = [
   },
   {
     id: "mountain-guard",
+    price: 6000,
     name: "Горный страж",
     kind: "Однозарядная винтовка",
     capacity: 1,
@@ -71,6 +77,7 @@ export const weapons = [
   },
   {
     id: "coach-thunder",
+    price: 8000,
     name: "Короткий гром",
     kind: "Короткая двустволка",
     capacity: 2,
@@ -84,6 +91,7 @@ export const weapons = [
   },
   {
     id: "silver-sunset",
+    price: 10000,
     name: "Серебряный закат",
     kind: "Охотничья двустволка",
     capacity: 2,
@@ -104,8 +112,10 @@ export function getWeapon(id) {
 /** @returns {ArsenalState} */
 export function emptyArsenal() {
   return {
-    version: 1,
+    version: 2,
     selected: weapons[0].id,
+    balance: 0,
+    owned: [weapons[0].id],
     stats: Object.fromEntries(weapons.map(({ id }) => [id, { hits: 0, misses: 0, civilianHits: 0 }])),
   };
 }
@@ -115,8 +125,7 @@ export function readArsenal(storage) {
   const state = emptyArsenal();
   try {
     const saved = JSON.parse(storage.getItem(arsenalKey) || "null");
-    if (!saved || saved.version !== 1) return state;
-    if (weapons.some(({ id }) => id === saved.selected)) state.selected = saved.selected;
+    if (!saved || ![1, 2].includes(saved.version)) return state;
     const count = (n) => Number.isSafeInteger(n) && n >= 0 ? n : 0;
     for (const { id } of weapons) {
       const row = saved.stats?.[id];
@@ -127,13 +136,51 @@ export function readArsenal(storage) {
         civilianHits: Math.min(hits, count(row?.civilianHits)),
       };
     }
+    if (saved.version === 1) {
+      // Before purchases existed every enemy hit already earned 100 score.
+      // Convert it once; version 2 never derives money from lifetime statistics.
+      for (const stats of Object.values(state.stats)) {
+        const enemies = Math.min(economy.maxBalance / economy.enemyBounty, stats.hits - stats.civilianHits);
+        state.balance = Math.min(economy.maxBalance, state.balance + enemies * economy.enemyBounty);
+      }
+    } else {
+      state.balance = Math.min(economy.maxBalance, count(saved.balance));
+      const owned = new Set(Array.isArray(saved.owned) ? saved.owned : []);
+      for (const weapon of weapons.slice(1)) {
+        if (!owned.has(weapon.id)) break;
+        state.owned.push(weapon.id);
+      }
+      if (state.owned.includes(saved.selected)) state.selected = saved.selected;
+    }
   } catch { /* Unavailable or corrupt storage must not prevent play. */ }
   return state;
 }
 
 /** @param {ArsenalState} state @returns {ArsenalState} */
 export function selectWeapon(state, id) {
-  return weapons.some((weapon) => weapon.id === id) ? { ...state, selected: id } : state;
+  return state.owned.includes(id) ? { ...state, selected: id } : state;
+}
+
+/** @param {ArsenalState} state */
+export function nextWeapon(state) {
+  return weapons.find(weapon => !state.owned.includes(weapon.id));
+}
+
+/** Buying and equipping is one atomic state change, with no second charge.
+ * @param {ArsenalState} state @returns {ArsenalState}
+ */
+export function purchaseWeapon(state, id) {
+  const weapon = nextWeapon(state);
+  if (!weapon || weapon.id !== id || state.balance < weapon.price) return state;
+  return { ...state, balance: state.balance - weapon.price, owned: [...state.owned, id], selected: id };
+}
+
+/** Called once by the scene's guarded finish, never on retry/menu/render.
+ * @param {ArsenalState} state @returns {ArsenalState}
+ */
+export function awardVictory(state, level) {
+  if (!Number.isInteger(level) || level < 1 || level >= economy.victoryBonuses.length) return state;
+  return { ...state, balance: Math.min(economy.maxBalance, state.balance + economy.victoryBonuses[level]) };
 }
 
 /** Each accepted shot has exactly one outcome; civilian hits are a subset of hits.
@@ -143,7 +190,7 @@ export function selectWeapon(state, id) {
  * @returns {ArsenalState}
  */
 export function recordShot(state, weaponId, outcome) {
-  if (!weapons.some(({ id }) => id === weaponId) || !["enemy", "civilian", "miss"].includes(outcome)) return state;
+  if (!state.owned.includes(weaponId) || !["enemy", "civilian", "miss"].includes(outcome)) return state;
   const before = state.stats[weaponId];
   const add = (value) => Math.min(Number.MAX_SAFE_INTEGER, value + 1);
   const after = { ...before };
@@ -152,7 +199,8 @@ export function recordShot(state, weaponId, outcome) {
     after.hits = add(after.hits);
     if (outcome === "civilian") after.civilianHits = add(after.civilianHits);
   }
-  return { ...state, stats: { ...state.stats, [weaponId]: after } };
+  return { ...state, balance: outcome === "enemy" ? Math.min(economy.maxBalance, state.balance + economy.enemyBounty) : state.balance,
+    stats: { ...state.stats, [weaponId]: after } };
 }
 
 /** @param {ArsenalState} state */

@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import "./style.css";
 import { GameAudio } from "./audio";
 import { Armory } from "./armory";
-import { getWeapon } from "./arsenal.js";
+import { getWeapon, economy } from "./arsenal.js";
 import { observeGameLayout } from "./layout";
 import { IntroDialogue } from "./dialogue";
 import { OpeningStory } from "./prologue";
@@ -68,6 +68,7 @@ class Town extends Phaser.Scene {
   ammo = this.capacity;
   lives = 3;
   score = 0;
+  earned = 0;
   kills = 0;
   reloading = false;
   paused = false;
@@ -161,6 +162,7 @@ class Town extends Phaser.Scene {
     el("equipped-name").textContent = `В руках: ${armory.equipped.name}`;
     this.lives = 3;
     this.score = 0;
+    this.earned = 0;
     this.kills = 0;
     this.encounter = new BossEncounter(this.slots, this.clock);
     this.reloading = false;
@@ -287,6 +289,7 @@ class Town extends Phaser.Scene {
     gameAudio.play("shot");
     let hitPerson = false;
     let outcome: "enemy" | "civilian" | "miss" = "miss";
+    let finished: boolean | undefined;
     const pan = (x - 480) / 480;
     const coverHit = this.combatView.hitCover(x, y);
     const flash = this.add.circle(x, y, coverHit ? 5 : 13, 0xffe9a9, 0.8).setDepth(9600);
@@ -301,7 +304,7 @@ class Town extends Phaser.Scene {
     });
     if (coverHit) {
       this.combatView.playerImpact(coverHit, this.clock);
-      if (selected === 0) { this.lives--; if (this.lives <= 0) this.finish(false); }
+      if (selected === 0) { this.lives--; if (this.lives <= 0) finished = false; }
     } else if (selected === 4) {
       const hit = this.encounter.fire(x, y, this.clock, this.map.occluders);
       if (hit === "hostage") {
@@ -310,15 +313,15 @@ class Town extends Phaser.Scene {
         this.lives--;
         gameAudio.play("civilianDeath", pan);
         el("boss-notice").textContent = `Сьюзи перед ним! −1 жизнь · Билли Пуля ${this.bossHP}/6`;
-        if (this.lives <= 0) this.finish(false);
+        if (this.lives <= 0) finished = false;
       } else if (hit === "hit" || hit === "defeated") {
         hitPerson = true;
         outcome = "enemy";
         gameAudio.play(hit === "defeated" ? "bossDeath" : "pain", pan);
         this.kills++;
-        this.score += 100;
+        this.score += economy.enemyBounty;
         this.renderBoss();
-        if (hit === "defeated") this.finish(true);
+        if (hit === "defeated") finished = true;
       }
     } else {
       const t = [...this.targets].sort((a, b) => (b.pixelsPerMeter ?? 0) - (a.pixelsPerMeter ?? 0))
@@ -333,19 +336,20 @@ class Town extends Phaser.Scene {
         if (t.civilian) this.lives--;
         else {
           this.kills++;
-          this.score += 100;
+          this.score += economy.enemyBounty;
         }
-        if (this.lives <= 0) this.finish(false);
+        if (this.lives <= 0) finished = false;
         else if (selected !== 0 && this.kills >= levels[selected].goal)
-          this.finish(true);
+          finished = true;
       } else if (selected === 0) {
         this.lives--;
-        if (this.lives <= 0) this.finish(false);
+        if (this.lives <= 0) finished = false;
       }
     }
-    armory.record(this.weaponId, outcome);
+    this.earned += armory.record(this.weaponId, outcome);
     if (!hitPerson && (coverHit || hitsWood(x, y, this.slots, this.map.id))) gameAudio.play("wood", pan);
     this.hud();
+    if (finished !== undefined) this.finish(finished);
   }
   finish(win: boolean) {
     if (this.intro || this.ended) return;
@@ -354,6 +358,8 @@ class Town extends Phaser.Scene {
     gameAudio.stop("reload");
     let saved = true;
     const endlessRun = selected === 0;
+    const bonus = win ? armory.rewardVictory(selected) : 0;
+    this.earned += bonus;
     if (win || endlessRun) {
       progress = recordWin(progress, selected, this.score);
       try {
@@ -372,6 +378,7 @@ class Town extends Phaser.Scene {
     el("result-text").textContent = endlessRun
       ? `${this.score} очков · ${this.kills} бандитов. Три ошибки — и смена окончена. ${saved ? "Рекорд сохранён." : "Сохранение недоступно: рекорд действует до закрытия страницы."}`
       : `${this.score} очков · ${this.kills} попаданий. ${win ? (saved ? "Прогресс сохранён." : "Сохранение недоступно: прогресс действует до закрытия страницы.") : "Попробуй снова: следи за патронами и береги жителей."}${win && selected === 4 ? " Сьюзи спасена — вы снова вместе." : ""}`;
+    el("result-reward").textContent = `В арсенал за бой: +${this.earned.toLocaleString("ru-RU")} очков${bonus ? ` · премия за победу: ${bonus.toLocaleString("ru-RU")}` : ""}. На счету: ${armory.balance.toLocaleString("ru-RU")} очков.${armory.persisted ? "" : " Сохранение недоступно: очки действуют до закрытия страницы."}`;
     el("retry").textContent = endlessRun ? "Начать заново" : "Ещё раз";
     el("choose").textContent = endlessRun ? "Главное меню" : "Выбор уровня";
     el("next").hidden = endlessRun || !win || selected === 4;
@@ -551,7 +558,7 @@ function menu() {
         <i class="door-leaf door-left"></i><i class="door-leaf door-right"></i>
         <i class="door-lock"></i>
       </i>
-      <span>${l.name}</span><small>${status}</small>`;
+      <span>${l.name}</span><small>${status}${i > 0 && i < progress.unlocked ? ` · ПРЕМИЯ +${economy.victoryBonuses[i]}` : ""}</small>`;
     b.addEventListener("pointerenter", (event) => {
       if (!b.disabled && event.pointerType !== "touch") gameAudio.play("hover");
     });

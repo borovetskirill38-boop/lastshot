@@ -695,6 +695,8 @@ body.in-menu footer {
 /* The armory is a separate room, sharing the menu's keyboard and touch controls. */
 .menu-tools {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
   margin: -8px 0 24px;
 }
@@ -781,6 +783,8 @@ body.in-arsenal #sound { background: #261c12e8; }
 }
 .weapon-card:hover { background: #7953364d !important; }
 .weapon-card.is-inspected { border-color: #dbad68; background: #68472566; }
+.weapon-card.is-locked .weapon-icon { opacity: .65; filter: grayscale(.5) drop-shadow(0 8px 7px #0007); }
+.weapon-card.is-locked.is-inspected .weapon-icon { opacity: .9; }
 .weapon-card > span { font-size: 17px; color: #ead1a6; }
 .weapon-card small { margin-top: 7px; color: #bba17c; font: 9px monospace; letter-spacing: 1px; }
 .weapon-card[aria-pressed="true"] small { color: #ebbe75; }
@@ -815,6 +819,15 @@ body.in-arsenal #sound { background: #261c12e8; }
 .equip-row { display: flex; align-items: center; flex-wrap: wrap; gap: 15px; min-height: 74px; }
 #equip-weapon { min-width: 180px; color: #ffdfaa; background: linear-gradient(135deg, #8d6032, #50321d); border-color: #d3a362; }
 #equip-weapon:disabled { opacity: 0.75; cursor: default; background: #3c3021; }
+#buy-weapon { max-width: 100%; color: #ffdfaa; background: linear-gradient(135deg, #8d6032, #50321d); border-color: #d3a362; white-space: normal; overflow-wrap: anywhere; }
+#buy-weapon:disabled { opacity: .65; background: #3c3021; cursor: default; }
+.menu-wallet { margin: 10px 0 0; font: 12px/1.5 Georgia, serif; color: #d4b88a; }
+.menu-wallet strong { color: #f0cd88; }
+.armory-heading .armory-wallet { display: inline-block; max-width: 100%; box-sizing: border-box; margin: 12px 0; padding: 12px 20px; border: 1px solid #b68a4d88; border-radius: 4px; background: #21180fe8; color: #cfb38a; font-size: 14px; overflow-wrap: anywhere; }
+.armory-wallet strong { display: inline; color: #ffdda0; font: bold clamp(25px, 4vw, 36px)/1.3 Georgia, serif; margin: 0 8px; }
+.armory-heading .economy-note { max-width: 640px; margin: 5px auto 0; color: #d1b998; font: 13px/1.7 Georgia, serif; }
+#weapon-purchase-note { color: #d5b27f; font: 13px/1.6 Georgia, serif; }
+#result-reward { color: #edc77f; font: 14px/1.7 Georgia, serif; }
 #arsenal-feedback { font: 12px/1.5 Georgia, serif; color: #e8c58e; }
 #arsenal-save-note { font: 11px/1.7 Georgia, serif; color: #a68e6e; margin-bottom: 0; }
 .loadout-readout { margin: 0; padding: 8px 14px; background: #241e1c; color: #bd9d6a; text-align: left; font: 11px monospace; }
